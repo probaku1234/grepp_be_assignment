@@ -1,8 +1,10 @@
 from sqlalchemy.engine.interfaces import DBAPICursor
-from database import engine
+from sqlalchemy.dialects.postgresql import insert
+from database import engine, Base
 import csv
 from dotenv import load_dotenv
 import os
+import datetime
 
 load_dotenv()
 
@@ -28,4 +30,18 @@ def init_data():
             _insert_user(line, cursor)
 
         print("---inserting user data ended---")
+        conn.commit()
+
+    with engine.connect() as conn:
+        exam_table = Base.metadata.tables['exam_schedules']
+
+        exam1_insert_stmt = insert(exam_table).values(name='exam 1',
+                                                      date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+                                                          days=2)).on_conflict_do_nothing()
+        exam2_insert_stmt = insert(exam_table).values(name='exam 2',
+                                                      date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+                                                          days=5)).on_conflict_do_nothing()
+
+        conn.execute(exam1_insert_stmt)
+        conn.execute(exam2_insert_stmt)
         conn.commit()
