@@ -10,3 +10,9 @@ class UserBase(BaseModel):
         from_attributes = True
 
 
+class LoginUser(BaseModel):
+    user_id: str
+    password: str
+
+    class Config:
+        from_attributes = True
