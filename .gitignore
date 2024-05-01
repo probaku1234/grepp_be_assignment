@@ -1,5 +1,6 @@
 ./venv
-./.idea
 /postgres-data/
-./**/.env
-./**/test.db
+**/test.db
+**/__pycache__
+**/.env
+.idea/*
