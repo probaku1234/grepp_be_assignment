@@ -4,3 +4,8 @@ SQLAlchemy
 pydantic
 pytest
 httpx
+starlette
+PyJWT
+python-dotenv
+pytest-env
+pytest-cov
