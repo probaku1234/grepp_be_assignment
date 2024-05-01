@@ -14,7 +14,7 @@ def _insert_user(data, cursor: DBAPICursor):
 
 
 def init_data():
-    if os.environ.get('environment', 'dev') != 'test':
+    if os.environ.get('environment', 'dev') == 'test':
         return
 
     with open('data/users.csv', "r", encoding='utf-8') as data:
