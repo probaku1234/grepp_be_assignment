@@ -1,7 +1,10 @@
 from sqlalchemy.engine.interfaces import DBAPICursor
-
 from database import engine
 import csv
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 def _insert_user(data, cursor: DBAPICursor):
@@ -11,6 +14,9 @@ def _insert_user(data, cursor: DBAPICursor):
 
 
 def init_data():
+    if os.environ.get('environment', 'dev') != 'test':
+        return
+
     with open('data/users.csv', "r", encoding='utf-8') as data:
         print("---inserting user data started---")
         conn = engine.raw_connection()
