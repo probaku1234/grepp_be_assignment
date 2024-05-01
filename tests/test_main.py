@@ -32,11 +32,12 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
-def test_get_all_users():
-    response = client.get(
-        "/users"
-    )
+class UserTest:
+    def test_get_all_users(self):
+        response = client.get(
+            "/users"
+        )
 
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert data == [], "should be empty"
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == [], "should be empty"
