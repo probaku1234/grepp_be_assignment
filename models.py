@@ -8,4 +8,4 @@ class User(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     user_id = Column(String, nullable=False)
     password = Column(String, nullable=False)
-    role = Column(String, nullable=False)
+    role = Column(String, nullable=False) # client / admin
