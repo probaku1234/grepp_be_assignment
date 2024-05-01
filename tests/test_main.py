@@ -32,7 +32,6 @@ def override_get_db():
         db.close()
 
 
-
 class UtilTest:
     def insert_user_data(data: Tuple):
         conn = engine.raw_connection()
@@ -68,19 +67,53 @@ JWT_SECRET = os.environ.get('JWT_SECRET')
 
 
 class TestUser:
-    def test_get_all_users(self, test_db_with_users):
+    def test_get_users_should_return_all_users_when_no_parameters_given(self, test_db_with_users):
         response = client.get(
             "/users"
         )
 
         assert response.status_code == 200, response.text
         data = response.json()
-        assert data == [{'password': '71b3b26aaa319e0cdf6fdb8429c112b0',
-                         'role': 'client',
-                         'user_id': 'user 1'},
-                        {'password': '71b3b26aaa319e0cdf6fdb8429c112b0',
-                         'role': 'admin',
-                         'user_id': 'admin 1'}]
+        assert data == [{
+            'role': 'client',
+            'user_id': 'user 1'},
+            {
+                'role': 'admin',
+                'user_id': 'admin 1'}]
+
+    def test_get_users_should_return_users_with_matched(self, test_db_with_users):
+        user_id_query = 'user'
+        role_query = 'admin'
+
+        response = client.get(
+            f"/users?role={role_query}",
+        )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == [
+            {
+                'role': 'admin',
+                'user_id': 'admin 1'}]
+
+        response = client.get(
+            f"/users?user_id={user_id_query}",
+        )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == [
+            {
+                'role': 'client',
+                'user_id': 'user 1'}]
+
+        response = client.get(
+            f"/users?user_id={user_id_query}&role={role_query}",
+        )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == []
 
     def test_login_should_return_400_when_credential_not_correct(self, test_db_with_users):
         response = client.post(

@@ -50,12 +50,14 @@ Annotated[
     """
     유저들의 리스트를 반환합니다. `user_id`와 `role`을 통해 검색할 수 있습니다. 만약 파라미터가 주어지지 않는다면 모든 유저들을 반환합니다.
     """
-    if not user_id and not role:
-        users = db.query(models.User).all()
-    else:
-        user_id = user_id if user_id else ""
+    user_id = user_id if user_id else ""
+    if role:
         users = db.query(models.User).filter(
             models.User.user_id.contains(user_id), models.User.role == role
+        )
+    else:
+        users = db.query(models.User).filter(
+            models.User.user_id.contains(user_id)
         )
 
     return users
