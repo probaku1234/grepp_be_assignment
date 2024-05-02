@@ -4,6 +4,7 @@ from database import engine
 import models
 from db_uploader import init_data
 from routers.user_router import user_router
+from routers.exam_router import exam_router
 import uvicorn
 
 # TODO: db no volume
@@ -15,6 +16,7 @@ init_data()
 app = FastAPI()
 
 app.include_router(user_router)
+app.include_router(exam_router)
 
 
 @app.get("/")
