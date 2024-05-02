@@ -11,7 +11,7 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False)  # client / admin
 
-    reservations = relationship('Reservation', back_populates='reservation')
+    reservations = relationship('Reservation', back_populates='user')
 
 
 class ExamSchedule(Base):
@@ -21,7 +21,7 @@ class ExamSchedule(Base):
     name = Column(String, nullable=False, unique=True)
     date_time = Column(DateTime, nullable=False)
 
-    reservations = relationship('Reservation', back_populates='reservation')
+    reservations = relationship('Reservation', back_populates='schedule')
 
 
 class Reservation(Base):
@@ -29,5 +29,7 @@ class Reservation(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('User', back_populates='reservations')
     exam_schedule_id = Column(Integer, ForeignKey('exam_schedules.id'))
+    schedule = relationship('ExamSchedule', back_populates='reservations')
     confirmed = Column(Boolean, nullable=False, default=False)
