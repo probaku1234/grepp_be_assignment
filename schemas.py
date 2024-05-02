@@ -35,3 +35,12 @@ class ExamScheduleBase(BaseModel):
 
 class GetExamSchedule(ExamScheduleBase):
     remain_slot: int
+
+
+class ReservationBase(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    id: int
+    user_id: int
+    exam_schedule_id: int
+    confirmed: bool

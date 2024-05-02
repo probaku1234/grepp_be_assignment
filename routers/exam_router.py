@@ -109,16 +109,32 @@ def make_reservation(exam_schedule_id: int, current_user: Annotated[TokenPayload
     return new_reservation
 
 
-@exam_router.get('/my_reservation', dependencies=[Depends(JWTBearer())])
+@exam_router.get('/my_reservation', dependencies=[Depends(JWTBearer())], response_model=List[schemas.ReservationBase])
 def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db)):
-    pass
+    if current_user['role'] != 'client':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only clients can view their reservations")
+
+        # Retrieve the reservations for the current user
+    reservations = db.query(models.Reservation).filter(models.Reservation.user_id == current_user['id']).all()
+
+    return reservations
 
 
-@exam_router.get('/user_reservation/{user_id}', dependencies=[Depends(JWTBearer())])
+@exam_router.get('/user_reservation/{user_id}', dependencies=[Depends(JWTBearer())], response_model=List[schemas.ReservationBase])
 def get_user_reservations(user_id: int, current_user: Annotated[TokenPayload, Depends(get_current_user)],
                           db: Session = Depends(get_db)):
-    pass
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can view user reservations")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User with {user_id} not found")
+
+        # Retrieve the reservations for the specified user_id
+    reservations = db.query(models.Reservation).filter(models.Reservation.user_id == user_id).all()
+
+    return reservations
 
 
 @exam_router.put('/confirm_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())])

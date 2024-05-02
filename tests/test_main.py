@@ -10,7 +10,7 @@ from typing import Tuple
 import datetime
 from database import Base, get_db
 from main import app
-from models import Reservation, ExamSchedule
+from models import Reservation, ExamSchedule, User
 from routers.exam_router import MAX_RESERVATION_NUM
 from util import encode_jwt, decode_jwt
 
@@ -61,6 +61,8 @@ class UtilTest:
 
         cursor.execute(query, data)
         conn.commit()
+
+
 @pytest.fixture()
 def test_db():
     Base.metadata.create_all(bind=engine)
@@ -88,6 +90,7 @@ def test_db_with_users_and_exam_schedules():
         days=5)))
     yield
     Base.metadata.drop_all(bind=engine)
+
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -191,7 +194,7 @@ class TestExamRoute:
 
         assert response.status_code == 403, response.text
 
-    def test_get_exam_schedules_should_return_401_with_invalid_token(self, test_db):
+    def test_get_exam_schedules_should_return_403_with_invalid_token(self, test_db):
         response = client.get(
             "/exam_schedule",
             headers={
@@ -264,7 +267,8 @@ class TestExamRoute:
         # Assert that the response status code is 403
         assert response.status_code == 403
 
-    def test_make_reservation_should_return_400_when_user_already_has_reservation(self, test_db_with_users_and_exam_schedules):
+    def test_make_reservation_should_return_400_when_user_already_has_reservation(self,
+                                                                                  test_db_with_users_and_exam_schedules):
         # Generate JWT token for a client user
         token = encode_jwt('1', 'user 1', 'client')
 
@@ -358,6 +362,158 @@ class TestExamRoute:
         assert response.json()["user_id"] == 1  # Assuming the user_id is '1' for the test case
         assert response.json()["exam_schedule_id"] == exam_schedule.id
         assert response.json()["confirmed"] is False  # Assuming the reservation is not confirmed initially
+
+    def test_my_reservation_should_return_403_with_no_token(self, test_db):
+        response = client.get(
+            "/exam_schedule/my_reservation",
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_my_reservation_should_return_403_with_invalid_token(self, test_db):
+        response = client.get(
+            "/exam_schedule/my_reservation",
+
+            headers={
+                "Authorization": "Bearer invalid_token"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_my_reservation_should_return_empty_list_with_no_reservation_data(self, test_db_with_users):
+        token = encode_jwt('1', 'user 1', 'client')
+
+        response = client.get(
+            "/exam_schedule/my_reservation",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == []
+
+    def test_my_reservation_should_return_403_when_admin(self, test_db_with_users):
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        response = client.get(
+            "/exam_schedule/my_reservation",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+        assert response.json()["detail"] == "Only clients can view their reservations"
+
+    def test_my_reservation_should_return_current_user_reservations(self, test_db_with_users_and_exam_schedules):
+        token = encode_jwt('1', 'user 1', 'client')
+
+        session = TestingSessionLocal()
+        reservations_data = [
+            {"user_id": '1', "exam_schedule_id": '1'},
+            {"user_id": '1', "exam_schedule_id": '2'}
+        ]
+        for reservation_data in reservations_data:
+            reservation = Reservation(**reservation_data)
+            session.add(reservation)
+        session.flush()
+
+        response = client.get(
+            "/exam_schedule/my_reservation",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        assert response.status_code == 200
+
+        response_data = response.json()
+        assert isinstance(response_data, list)
+        assert len(response_data) == 2
+
+        for item in response_data:
+            assert "id" in item
+            assert "user_id" in item
+            assert "exam_schedule_id" in item
+
+    def test_get_user_reservations_should_return_403_with_no_token(self, test_db):
+        response = client.get(
+            "/exam_schedule/user_reservation/1",
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_get_user_reservations_should_return_403_with_invalid_token(self, test_db):
+        response = client.get(
+            "/exam_schedule/user_reservation/1",
+
+            headers={
+                "Authorization": "Bearer invalid_token"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_get_user_reservations_should_return_403_for_client(self, test_db_with_users):
+        token = encode_jwt('1', 'user 1', 'client')
+
+        response = client.get(
+            "/exam_schedule/user_reservation/1",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+        assert response.json()["detail"] == "Only admins can view user reservations"
+
+    def test_get_user_reservations_should_return_400_when_user_not_found(self, test_db_with_users):
+        # Create an admin user and generate a JWT token for them
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        invalid_user_id = 999
+        # Send a request to the endpoint with the generated token and a user_id that doesn't exist in the test database
+        response = client.get(
+            f"/exam_schedule/user_reservation/{invalid_user_id}",  # Using a user_id that doesn't exist in the test database
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Assert that the response status code is 404 (Not Found)
+        assert response.status_code == 400
+
+        # Assert that the response contains the appropriate error message
+        assert response.json()["detail"] == f"User with {invalid_user_id} not found"
+
+    def test_get_user_reservations_success(self, test_db_with_users):
+        # Create an admin user and generate a JWT token for them
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        session = TestingSessionLocal()
+        reservations_data = [
+            {"user_id": 1, "exam_schedule_id": 1},
+            {"user_id": 1, "exam_schedule_id": 2}
+        ]
+        for reservation_data in reservations_data:
+            reservation = Reservation(**reservation_data)
+            session.add(reservation)
+        session.flush()
+
+        # Send a request to the endpoint with the generated token and the user_id of the created user
+        response = client.get(
+            "/exam_schedule/user_reservation/1",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Assert that the response status code is 200
+        assert response.status_code == 200
+
+        # Assert that the response data matches the expected format
+        response_data = response.json()
+        assert isinstance(response_data, list)
+        assert len(response_data) == 2
 
 
 class TestUtil:
