@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import os
 from typing import Tuple
 import datetime
+
+import models
 from database import Base, get_db
 from main import app
 from models import Reservation, ExamSchedule, User
@@ -481,7 +483,8 @@ class TestExamRoute:
             invalid_user_id = 999
             # Send a request to the endpoint with the generated token and a user_id that doesn't exist in the test database
             response = client.get(
-                f"/exam_schedule/user_reservation/{invalid_user_id}",  # Using a user_id that doesn't exist in the test database
+                f"/exam_schedule/user_reservation/{invalid_user_id}",
+                # Using a user_id that doesn't exist in the test database
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -557,7 +560,8 @@ class TestExamRoute:
 
             # Send a request to the endpoint with the generated token and a reservation_id that doesn't exist in the test database
             response = client.put(
-                "/exam_schedule/confirm_reservation/999",  # Using a reservation_id that doesn't exist in the test database
+                "/exam_schedule/confirm_reservation/999",
+                # Using a reservation_id that doesn't exist in the test database
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -615,6 +619,165 @@ class TestExamRoute:
             session.refresh(reservation)
             confirmed_reservation = session.query(Reservation).get(1)
             assert confirmed_reservation.confirmed
+
+    class TestDeleteReservation:
+        def test_delete_reservation_should_return_403_with_no_token(self, test_db):
+            response = client.delete(
+                "/exam_schedule/delete_reservation/1",
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_delete_reservation_should_return_403_with_invalid_token(self, test_db):
+            response = client.delete(
+                "/exam_schedule/delete_reservation/1",
+
+                headers={
+                    "Authorization": "Bearer invalid_token"
+                }
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_delete_reservation_should_return_404_when_not_found(self, test_db_with_users):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('1', 'user 1', 'client')
+
+            # Send a request to the endpoint with the generated token and a reservation_id that doesn't exist in the test database
+            response = client.delete(
+                "/exam_schedule/delete_reservation/999",
+                # Using a reservation_id that doesn't exist in the test database
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 404 (Not Found)
+            assert response.status_code == 404
+
+            # Assert that the response contains the appropriate error message
+            assert response.json()["detail"] == "Reservation not found"
+
+        def test_delete_reservation_should_return_403_client_delete_other_reservation(self,
+                                                                                      test_db_with_users_and_exam_schedules):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('1', 'user 1', 'client')
+
+            # Create a reservation owned by another user in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=2, exam_schedule_id=1, confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Send a request to the endpoint with the generated token and the reservation_id of the reservation owned by another user
+            response = client.delete(
+                f"/exam_schedule/delete_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 403 (Forbidden)
+            assert response.status_code == 403
+
+            # Assert that the response contains the appropriate error message
+            assert response.json()["detail"] == "Cannot delete this reservation"
+
+        def test_delete_reservation_should_return_403_client_delete_confirmed_reservation(self,
+                                                                                          test_db_with_users_and_exam_schedules):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('1', 'user 1', 'client')
+
+            # Create a reservation owned by another user in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, confirmed=True)
+            session.add(reservation)
+            session.flush()
+
+            # Send a request to the endpoint with the generated token and the reservation_id of the reservation owned by another user
+            response = client.delete(
+                f"/exam_schedule/delete_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 403 (Forbidden)
+            assert response.status_code == 403
+
+            # Assert that the response contains the appropriate error message
+            assert response.json()["detail"] == "Cannot delete this reservation"
+
+        def test_delete_reservation_should_return_403_admin_delete_confirmed_reservation(self,
+                                                                                         test_db_with_users_and_exam_schedules):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            # Create a reservation owned by another user in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, confirmed=True)
+            session.add(reservation)
+            session.flush()
+
+            # Send a request to the endpoint with the generated token and the reservation_id of the reservation owned by another user
+            response = client.delete(
+                f"/exam_schedule/delete_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 403 (Forbidden)
+            assert response.status_code == 403
+
+            # Assert that the response contains the appropriate error message
+            assert response.json()["detail"] == "Cannot delete confirmed reservation"
+
+        def test_delete_reservation_client_delete_success(self, test_db_with_users_and_exam_schedules):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('1', 'user 1', 'client')
+
+            # Create a reservation in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Send a request to the endpoint with the generated token and the reservation_id of the created reservation
+            response = client.delete(
+                f"/exam_schedule/delete_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 200
+            assert response.status_code == 200, response.text
+
+            # Assert that the response message indicates successful deletion
+            assert response.json()["message"] == "Reservation deleted successfully"
+
+            # Assert that the reservation is now deleted from the database
+            session.expire_all()
+            deleted_reservation = session.query(Reservation).get(1)
+            assert deleted_reservation is None
+
+        def test_delete_reservation_admin_delete_success(self, test_db_with_users_and_exam_schedules):
+            # Create a client user and generate a JWT token for them
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            # Create a reservation in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Send a request to the endpoint with the generated token and the reservation_id of the created reservation
+            response = client.delete(
+                f"/exam_schedule/delete_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Assert that the response status code is 200
+            assert response.status_code == 200, response.text
+
+            # Assert that the response message indicates successful deletion
+            assert response.json()["message"] == "Reservation deleted successfully"
+
+            # Assert that the reservation is now deleted from the database
+            session.expire_all()
+            deleted_reservation = session.query(Reservation).get(1)
+            assert deleted_reservation is None
 
 
 class TestUtil:
