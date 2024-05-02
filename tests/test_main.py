@@ -240,6 +240,124 @@ class TestExamRoute:
             data = response.json()
             assert len(data) == 2
 
+    class TestCreateExamSchedule:
+        def test_create_exam_schedule_should_return_403_with_no_token(self, test_db):
+            response = client.post(
+                "/exam_schedule",
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_create_exam_schedule_should_return_401_with_invalid_token(self, test_db):
+            response = client.post(
+                "/exam_schedule",
+                headers={
+                    "Authorization": "Bearer invalid_token"
+                }
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_create_exam_schedule_should_return_403_for_non_client_user(self, test_db_with_users):
+            # Generate JWT token for a non-client user (e.g., admin)
+            token = encode_jwt('1', 'client 1', 'client')
+
+            # Send a POST request to the make_reservation endpoint
+            response = client.post(
+                "/exam_schedule",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "name": 'test test',
+                    "date_time": '2025-02-20 12:30'
+                }
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 403
+
+        def test_create_exam_schedule_should_return_422_when_past_date_given(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            # Send a POST request to the make_reservation endpoint
+            response = client.post(
+                "/exam_schedule",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "name": 'test test',
+                    "date_time": '1990-02-20 12:30'
+                }
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 422, response.text
+            assert response.json()['detail'][0]['msg'] == 'Input should be in the future'
+
+        def test_create_exam_schedule_should_return_422_when_required_fields_not_given(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            # Send a POST request to the make_reservation endpoint
+            response = client.post(
+                "/exam_schedule",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "date_time": '1990-02-20 12:30'
+                }
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 422, response.text
+            assert response.json()['detail'][0]['msg'] == 'Field required'
+
+        def test_create_exam_schedule_should_return_400_when_name_alreay_exist(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            test_name = 'test test'
+            session = TestingSessionLocal()
+            new_exam_schedule = models.ExamSchedule(
+                name=test_name,
+                date_time=datetime.datetime.now(datetime.UTC)
+            )
+            session.add(new_exam_schedule)
+            session.flush()
+
+            # Send a POST request to the make_reservation endpoint
+            response = client.post(
+                "/exam_schedule",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "name": test_name,
+                    "date_time": '2025-02-20 12:30'
+                }
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 400, response.text
+            assert response.json()['detail'] == "Exam schedule's name must be unique. Please use other name."
+
+        def test_create_exam_schedule_success(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            test_name = 'test test'
+            test_date = '2025-02-20 12:30'
+
+            # Send a POST request to the make_reservation endpoint
+            response = client.post(
+                "/exam_schedule",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "name": test_name,
+                    "date_time": test_date
+                }
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 201, response.text
+
+            session = TestingSessionLocal()
+            created_exam_schedule = session.query(ExamSchedule).get(1)
+            assert created_exam_schedule.name == test_name
+            assert created_exam_schedule.date_time == datetime.datetime.strptime(test_date, '%Y-%m-%d %H:%M')
+
     class TestMakeReservation:
         def test_make_reservation_should_return_403_with_no_token(self, test_db):
             response = client.post(

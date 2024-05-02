@@ -25,7 +25,6 @@ exam_router = APIRouter(
 )
 
 
-# FIXME: token save user id so no query needed
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     return decode_jwt(token)
 
@@ -75,9 +74,54 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
     return schedules
 
 
-# out of range?
+@exam_router.post('/', dependencies=[Depends(JWTBearer())], status_code=status.HTTP_201_CREATED,
+                  response_model=schemas.ExamScheduleBase, responses={
+        400: {
+            "description": "주어진 `name`을 가진 시험 일정이 이미 존재하는 경우",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Exam schedule's name must be unique. Please use other name."}
+                }
+            }
+        },
+        403: {
+            "description": "현재 유저가 client인 경우",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Only admin can make exam schedules"}
+                }
+            }
+        }
+    })
+def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
+                         current_user: Annotated[TokenPayload, Depends(get_current_user)],
+                         db: Session = Depends(get_db)):
+    """
+    새로운 시험 일정을 만듭니다. 시험의 이름은 반드시 고유해야 하며, 시험 날짜는 현재보다 이후의 시간이여야 합니다.
+    어드민 전용 API 입니다.
+    """
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin can make exam schedules")
+
+    exam_schedule = db.query(models.ExamSchedule).filter(models.ExamSchedule.name == create_schedule.name).first()
+    if exam_schedule:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Exam schedule's name must be unique. Please use other name.")
+
+    new_exam_schedule = models.ExamSchedule(
+        name=create_schedule.name,
+        date_time=create_schedule.date_time
+    )
+    db.add(new_exam_schedule)
+    db.commit()
+    db.refresh(new_exam_schedule)
+
+    return new_exam_schedule
+
+
+# FIXME: output schema
 @exam_router.post('/make_reservation/{exam_schedule_id}', dependencies=[Depends(JWTBearer())],
-                  status_code=status.HTTP_201_CREATED, responses={
+                  status_code=status.HTTP_201_CREATED, response_model=schemas.ReservationBase, responses={
         404: {
             "description": "`exam_schedule_id`값을 가진 시험 일정이 없는 경우",
             "content": {
