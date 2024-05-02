@@ -8,8 +8,9 @@ load_dotenv()
 JWT_SECRET = os.environ.get('JWT_SECRET')
 
 
-def encode_jwt(user_id, role):
+def encode_jwt(id, user_id, role):
     payload = {
+        'id': id,
         'user_id': user_id,
         'role': role,
         'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=60 * 60 * 24)

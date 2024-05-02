@@ -94,4 +94,4 @@ def login(login_user: schemas.LoginUser, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"The id or password is not right")
 
     # create jwt token and return
-    return {'token': encode_jwt(user.user_id, user.role)}
+    return {'token': encode_jwt(user.id, user.user_id, user.role)}
