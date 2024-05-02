@@ -140,4 +140,24 @@ def get_user_reservations(user_id: int, current_user: Annotated[TokenPayload, De
 @exam_router.put('/confirm_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())])
 def confirm_reservation(reservation_id: int, current_user: Annotated[TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db)):
-    pass
+    # Check if the current user is an admin
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can confirm reservations")
+
+    # Retrieve the reservation from the database
+    reservation = db.query(models.Reservation).filter(models.Reservation.id == reservation_id).first()
+
+    # Check if the reservation exists
+    if not reservation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+    # Check if the reservation is already confirmed
+    if reservation.confirmed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reservation already confirmed")
+
+    # Update the reservation to set confirmed to True
+    reservation.confirmed = True
+    db.commit()
+
+    # Return a message indicating successful confirmation
+    return {"message": "Reservation confirmed successfully"}

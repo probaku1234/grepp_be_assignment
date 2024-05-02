@@ -515,6 +515,102 @@ class TestExamRoute:
         assert isinstance(response_data, list)
         assert len(response_data) == 2
 
+    def test_confirm_reservation_should_return_403_with_no_token(self, test_db):
+        response = client.put(
+            "/exam_schedule/confirm_reservation/1",
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_confirm_reservation_should_return_403_with_invalid_token(self, test_db):
+        response = client.put(
+            "/exam_schedule/confirm_reservation/1",
+
+            headers={
+                "Authorization": "Bearer invalid_token"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+
+    def test_confirm_reservation_should_return_403_for_client(self, test_db_with_users):
+        token = encode_jwt('1', 'user 1', 'client')
+
+        response = client.put(
+            "/exam_schedule/confirm_reservation/1",
+            headers={
+                "Authorization": f"Bearer {token}"
+            }
+        )
+
+        assert response.status_code == 403, response.text
+        assert response.json()["detail"] == "Only admins can confirm reservations"
+
+    def test_confirm_reservation_should_return_404_reservation_not_found(self, test_db_with_users):
+        # Create an admin user and generate a JWT token for them
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        # Send a request to the endpoint with the generated token and a reservation_id that doesn't exist in the test database
+        response = client.put(
+            "/exam_schedule/confirm_reservation/999",  # Using a reservation_id that doesn't exist in the test database
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Assert that the response status code is 404 (Not Found)
+        assert response.status_code == 404
+
+        # Assert that the response contains the appropriate error message
+        assert response.json()["detail"] == "Reservation not found"
+
+    def test_confirm_reservation_already_confirmed(self, test_db_with_users):
+        # Create an admin user and generate a JWT token for them
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        # Create a confirmed reservation in the test database
+        session = TestingSessionLocal()
+        reservation = Reservation(user_id=2, exam_schedule_id=1, confirmed=True)
+        session.add(reservation)
+        session.flush()
+
+        # Send a request to the endpoint with the generated token and the reservation_id of the already confirmed reservation
+        response = client.put(
+            "/exam_schedule/confirm_reservation/1",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Assert that the response status code is 400 (Bad Request)
+        assert response.status_code == 400
+
+        # Assert that the response contains the appropriate error message
+        assert response.json()["detail"] == "Reservation already confirmed"
+
+    def test_confirm_reservation_success(self, test_db_with_users):
+        # Create an admin user and generate a JWT token for them
+        token = encode_jwt('2', 'admin 1', 'admin')
+
+        # Create a reservation in the test database
+        session = TestingSessionLocal()
+        reservation = Reservation(user_id=2, exam_schedule_id=1, confirmed=False)
+        session.add(reservation)
+        session.flush()
+
+        # Send a request to the endpoint with the generated token and the reservation_id of the created reservation
+        response = client.put(
+            "/exam_schedule/confirm_reservation/1",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Assert that the response status code is 200
+        assert response.status_code == 200
+
+        # Assert that the response message indicates successful confirmation
+        assert response.json()["message"] == "Reservation confirmed successfully"
+
+        # Assert that the reservation is now confirmed in the database
+        session.refresh(reservation)
+        confirmed_reservation = session.query(Reservation).get(1)
+        assert confirmed_reservation.confirmed
+
 
 class TestUtil:
     def test_encode_jwt(self):
