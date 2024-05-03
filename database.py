@@ -1,3 +1,7 @@
+"""
+DB에 연결하는 코드입니다.
+"""
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
