@@ -383,7 +383,10 @@ class TestExamRoute:
             # Send a POST request to the make_reservation endpoint
             response = client.post(
                 "/exam_schedule/make_reservation/2",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'comment': ""
+                }
             )
 
             # Assert that the response status code is 403
@@ -404,7 +407,10 @@ class TestExamRoute:
             # Send a POST request to the make_reservation endpoint
             response = client.post(
                 "/exam_schedule/make_reservation/1",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'comment': ""
+                }
             )
 
             # Assert that the response status code is 400
@@ -418,7 +424,10 @@ class TestExamRoute:
             # Send a POST request to the make_reservation endpoint with a non-existent exam_schedule_id
             response = client.post(
                 f"/exam_schedule/make_reservation/{exam_schedule_id}",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'comment': ""
+                }
             )
 
             # Assert that the response status code is 404
@@ -448,7 +457,10 @@ class TestExamRoute:
             # Send a POST request to the make_reservation endpoint for the exam schedule with maximum reservations
             response = client.post(
                 f"/exam_schedule/make_reservation/{exam_schedule.id}",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'comment': ""
+                }
             )
 
             # Assert that the response status code is 400
@@ -468,10 +480,14 @@ class TestExamRoute:
 
             session.commit()
 
+            test_comment = "test comment"
             # Send a POST request to the make_reservation endpoint
             response = client.post(
                 f"/exam_schedule/make_reservation/{exam_schedule.id}",
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'comment': test_comment
+                }
             )
 
             # Assert that the response status code is 201
@@ -481,8 +497,10 @@ class TestExamRoute:
             assert "user_id" in response.json()
             assert "exam_schedule_id" in response.json()
             assert "confirmed" in response.json()
+            assert "comment" in response.json()
             assert response.json()["user_id"] == 1  # Assuming the user_id is '1' for the test case
             assert response.json()["exam_schedule_id"] == exam_schedule.id
+            assert response.json()["comment"] == test_comment
             assert response.json()["confirmed"] is False  # Assuming the reservation is not confirmed initially
 
     class TestGetMyReservation:

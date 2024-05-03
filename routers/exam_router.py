@@ -148,6 +148,7 @@ def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
         }
     })
 def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+                     make_reservation_request: schemas.MakeReservation,
                      db: Session = Depends(get_db),
                      exam_schedule_id: int = Path(..., description='예약을 신청할 시험 일정의 `id`')):
     """
@@ -182,7 +183,8 @@ def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
     # Create a new reservation
     new_reservation = models.Reservation(
         user_id=current_user['id'],
-        exam_schedule_id=exam_schedule_id
+        exam_schedule_id=exam_schedule_id,
+        comment=make_reservation_request.comment
     )
     db.add(new_reservation)
     db.commit()

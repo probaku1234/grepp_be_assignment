@@ -50,4 +50,11 @@ class ReservationBase(BaseModel):
     id: int
     user_id: int
     exam_schedule_id: int
+    comment: str
     confirmed: bool
+
+
+class MakeReservation(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    comment: str = Field(description="예약 신청의 코멘트", examples=['코멘트'])
