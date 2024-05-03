@@ -30,7 +30,7 @@ Python과 FastApi를 이용한 온라인 시험 플랫폼에서 고객과 어드
 |_📄 pytest.ini  - 테스트 설정 파일   
 |_📄 README.md  
 |_📄 requirements.txt  
-|_📄 schemas.py  endpoint들의 response와 request format을 정의하는 파일  
+|_📄 schemas.py - endpoint들의 response와 request format을 정의하는 파일  
 |_📄 util.py  
 
 ### DB 구조
@@ -46,6 +46,7 @@ Python과 FastApi를 이용한 온라인 시험 플랫폼에서 고객과 어드
 1. 50000개의 고객 유저와 10개의 어드민 유저를 삽입합니다.
     * 고객 유저의 `user_id`는 1부터 50000까지 순서대로 `user {i}`를 가집니다. ex) user 1, user 2, user 3,....  
     * 어드민 유저의 `user_id`는 1부터 10까지 순서대로 `admin {i}`를 가집니다. ex) admin 1, admin 2, admin 3,....  
+    * 모든 유저의 비밀번호는 789456입니다.
 2. 2개의 시험 일정을 삽입합니다.
     * 하나는 현재 시간으로부터 2일 후를, 다른 하나는 5일 후를 시험 시간으로 가지는 시험 일정을 삽입합니다.
 
