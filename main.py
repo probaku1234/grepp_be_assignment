@@ -31,19 +31,33 @@ description = """
 * **예약 신청 수정**
 * **예약 신청 삭제**
 """
+tags_metadata = [
+    {
+        'name': '유저',
+        'description': '유저와 관련된 API. **로그인** API도 여기에 있습니다'
+    },
+    {
+        'name': '시험 일정',
+        'description': '시험 일정과 관련된 API. 시험 일정 관리에 관련된 API들이 있습니다'
+    }
+]
 
 app = FastAPI(
     title='BE 개발자 과제',
     description=description,
     summary='시험 일정 예약 처리 시스템',
+    openapi_tags=tags_metadata
 )
 
 app.include_router(user_router)
 app.include_router(exam_router)
 
 
-@app.get('/')
+@app.get('/', name="Hello World!")
 def read_root():
+    """
+    테스트용 API 입니다.
+    """
     return {'Hello': 'World'}
 
 

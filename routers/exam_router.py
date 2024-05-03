@@ -21,7 +21,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 exam_router = APIRouter(
     prefix='/exam_schedule',
-    tags=['Exam Schedules']
+    tags=['시험 일정']
 )
 
 
@@ -30,7 +30,8 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 
 # FIXME: if slot 0, exclude
-@exam_router.get('/', dependencies=[Depends(JWTBearer())], response_model=List[schemas.GetExamSchedule])
+@exam_router.get('/', dependencies=[Depends(JWTBearer())], response_model=List[schemas.GetExamSchedule],
+                 name='시험 일정 조회')
 def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current_user)], db: Session = Depends(get_db)):
     """
     시험 일정들과 각 일정들의 남아있는 예약 슬롯을 반환합니다.
@@ -68,7 +69,7 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
     return schedules
 
 
-@exam_router.post('/', dependencies=[Depends(JWTBearer())], status_code=status.HTTP_201_CREATED,
+@exam_router.post('/', name='시험 일정 생성', dependencies=[Depends(JWTBearer())], status_code=status.HTTP_201_CREATED,
                   response_model=schemas.ExamScheduleBase, responses={
         400: {
             "description": "주어진 `name`을 가진 시험 일정이 이미 존재하는 경우",
@@ -115,32 +116,33 @@ def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
 
 # FIXME: output schema
 @exam_router.post('/make_reservation/{exam_schedule_id}', dependencies=[Depends(JWTBearer())],
-                  status_code=status.HTTP_201_CREATED, response_model=schemas.ReservationBase, responses={
-        404: {
-            "description": "`exam_schedule_id`값을 가진 시험 일정이 없는 경우",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Exam schedule not found"}
-                }
-            }
-        },
-        400: {
-            "description": "해당 유저가 이미 예약 신청을 했거나 남은 슬롯이 없는 경우",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "User already has a reservation for this exam schedule"}
-                }
-            }
-        },
-        403: {
-            "description": "현재 유저가 admin인 경우",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Only clients can make reservations"}
-                }
-            }
-        }
-    })
+                  status_code=status.HTTP_201_CREATED, response_model=schemas.ReservationBase, name='시험 일정 예약신청',
+                  responses={
+                      404: {
+                          "description": "`exam_schedule_id`값을 가진 시험 일정이 없는 경우",
+                          "content": {
+                              "application/json": {
+                                  "example": {"detail": "Exam schedule not found"}
+                              }
+                          }
+                      },
+                      400: {
+                          "description": "해당 유저가 이미 예약 신청을 했거나 남은 슬롯이 없는 경우",
+                          "content": {
+                              "application/json": {
+                                  "example": {"detail": "User already has a reservation for this exam schedule"}
+                              }
+                          }
+                      },
+                      403: {
+                          "description": "현재 유저가 admin인 경우",
+                          "content": {
+                              "application/json": {
+                                  "example": {"detail": "Only clients can make reservations"}
+                              }
+                          }
+                      }
+                  })
 def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
                      make_reservation_request: schemas.MakeEditReservation,
                      db: Session = Depends(get_db),
@@ -186,7 +188,8 @@ def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
     return new_reservation
 
 
-@exam_router.get('/my_reservation', dependencies=[Depends(JWTBearer())], response_model=List[schemas.ReservationBase],
+@exam_router.get('/my_reservation', dependencies=[Depends(JWTBearer())], name='내 예약 신청 조회',
+                 response_model=List[schemas.ReservationBase],
                  responses={
                      403: {
                          "description": "현재 유저가 admin인 경우",
@@ -212,7 +215,7 @@ def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_curren
 
 
 @exam_router.get('/user_reservation/{user_id}', dependencies=[Depends(JWTBearer())],
-                 response_model=List[schemas.ReservationBase], responses={
+                 response_model=List[schemas.ReservationBase], name='예약 신청 조회', responses={
         400: {
             "description": "`user_id`값을 가진 유저가 없는 경우",
             "content": {
@@ -249,39 +252,40 @@ def get_user_reservations(current_user: Annotated[TokenPayload, Depends(get_curr
     return reservations
 
 
-@exam_router.put('/confirm_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], responses={
-    200: {
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation confirmed successfully"}
-            }
-        }
-    },
-    404: {
-        "description": "`reservation_id`값을 가진 예약이 없는 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation not found"}
-            }
-        }
-    },
-    400: {
-        "description": "예약이 이미 확정된 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation already confirmed"}
-            }
-        }
-    },
-    403: {
-        "description": "현재 유저가 client인 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Only admins can confirm reservations"}
-            }
-        }
-    }
-})
+@exam_router.put('/confirm_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], name='예약 신청 확정',
+                 responses={
+                     200: {
+                         "content": {
+                             "application/json": {
+                                 "example": {"message": "Reservation confirmed successfully"}
+                             }
+                         }
+                     },
+                     404: {
+                         "description": "`reservation_id`값을 가진 예약이 없는 경우",
+                         "content": {
+                             "application/json": {
+                                 "example": {"message": "Reservation not found"}
+                             }
+                         }
+                     },
+                     400: {
+                         "description": "예약이 이미 확정된 경우",
+                         "content": {
+                             "application/json": {
+                                 "example": {"message": "Reservation already confirmed"}
+                             }
+                         }
+                     },
+                     403: {
+                         "description": "현재 유저가 client인 경우",
+                         "content": {
+                             "application/json": {
+                                 "example": {"message": "Only admins can confirm reservations"}
+                             }
+                         }
+                     }
+                 })
 def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db),
                         reservation_id: int = Path(..., description='확정할 예약 신청의 `id`')):
@@ -306,7 +310,7 @@ def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_curren
     return {"message": "Reservation confirmed successfully"}
 
 
-@exam_router.put('/edit_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], responses={
+@exam_router.put('/edit_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], name='예약 신청 수정', responses={
     200: {
         "content": {
             "application/json": {
@@ -366,31 +370,32 @@ def edit_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
     return {"message": "Reservation comment updated successfully"}
 
 
-@exam_router.delete('/delete_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], responses={
-    200: {
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation deleted successfully"}
-            }
-        }
-    },
-    404: {
-        "description": "`reservation_id`값을 가진 예약이 없는 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation not found"}
-            }
-        }
-    },
-    403: {
-        "description": "클라이언트 유저가 본인이 신청하지 않은 예약이나 이미 확정된 예약을 삭제할려는 경우, 어드민 유저가 이미 확정된 예약을 삭제할려는 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Cannot delete this reservation"}
-            }
-        }
-    }
-})
+@exam_router.delete('/delete_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], name='예약 신청 삭제',
+                    responses={
+                        200: {
+                            "content": {
+                                "application/json": {
+                                    "example": {"message": "Reservation deleted successfully"}
+                                }
+                            }
+                        },
+                        404: {
+                            "description": "`reservation_id`값을 가진 예약이 없는 경우",
+                            "content": {
+                                "application/json": {
+                                    "example": {"message": "Reservation not found"}
+                                }
+                            }
+                        },
+                        403: {
+                            "description": "클라이언트 유저가 본인이 신청하지 않은 예약이나 이미 확정된 예약을 삭제할려는 경우, 어드민 유저가 이미 확정된 예약을 삭제할려는 경우",
+                            "content": {
+                                "application/json": {
+                                    "example": {"message": "Cannot delete this reservation"}
+                                }
+                            }
+                        }
+                    })
 def delete_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
                        db: Session = Depends(get_db), reservation_id: int = Path(..., description='삭제할 예약 신청의 `id`')):
     """

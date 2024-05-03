@@ -12,7 +12,7 @@ from util import encode_jwt
 
 user_router = APIRouter(
     prefix='/users',
-    tags=['Users']
+    tags=['유저']
 )
 
 
@@ -31,7 +31,7 @@ def _encrypt_password(password):
     return encrypted_password
 
 
-@user_router.get('/', response_model=List[schemas.UserBase])
+@user_router.get('/', response_model=List[schemas.UserBase], name='유저 검색')
 def get_users(db: Session = Depends(get_db), user_id:
 Annotated[
     str | None,
@@ -65,7 +65,7 @@ Annotated[
     return users
 
 
-@user_router.post('/login', responses={
+@user_router.post('/login', name='로그인', responses={
     200: {
         "description": "JWT token",
         "content": {
