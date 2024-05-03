@@ -244,6 +244,78 @@ class TestExamRoute:
             data = response.json()
             assert len(data) == 2
 
+        def test_get_exam_schedules_should_return_exam_schedules_within_range_for_client(self, test_db_with_users):
+            token = encode_jwt('1', 'user 1', 'client')
+
+            UtilTest.insert_exam_schedule_data((1, 'exam 1', datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+                days=1)))
+            UtilTest.insert_exam_schedule_data((2, 'exam 2', datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+                days=5)))
+            UtilTest.insert_exam_schedule_data((3, 'exam 3', datetime.datetime(2022,2,3)))
+
+            response = client.get(
+                "/exam_schedule",
+                headers={
+                    "Authorization": f"Bearer {token}"
+                }
+            )
+
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert len(data) == 1
+            assert data[0]['name'] == 'exam 1'
+
+        def test_get_exam_schedules_should_exclude_exam_schedules_if_already_reserved_for_client(self, test_db_with_users):
+            token = encode_jwt('1', 'user 1', 'client')
+
+            session = TestingSessionLocal()
+            exam_schedule = ExamSchedule(name="Example Exam", date_time=datetime.datetime.now(datetime.UTC)+ datetime.timedelta(
+                days=2))
+            session.add(exam_schedule)
+
+            session.commit()
+
+            reservation = Reservation(user_id='1', exam_schedule_id=exam_schedule.id, confirmed=True)
+            session.add(reservation)
+            session.commit()
+
+            response = client.get(
+                "/exam_schedule",
+                headers={
+                    "Authorization": f"Bearer {token}"
+                }
+            )
+
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert len(data) == 0
+
+        def test_get_exam_schedules_should_return_remain_slot(self, test_db_with_users):
+            token = encode_jwt('1', 'user 1', 'client')
+
+            session = TestingSessionLocal()
+            exam_schedule = ExamSchedule(name="Example Exam", date_time=datetime.datetime.now(datetime.UTC)+ datetime.timedelta(
+                days=2))
+            session.add(exam_schedule)
+
+            session.commit()
+
+            reservation = Reservation(user_id='2', exam_schedule_id=exam_schedule.id, confirmed=True)
+            session.add(reservation)
+            session.commit()
+
+            response = client.get(
+                "/exam_schedule",
+                headers={
+                    "Authorization": f"Bearer {token}"
+                }
+            )
+
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert len(data) == 1
+            assert data[0]['remain_slot'] == 49999
+
     class TestCreateExamSchedule:
         def test_create_exam_schedule_should_return_403_with_no_token(self, test_db):
             response = client.post(

@@ -1,5 +1,5 @@
 import datetime
-from typing import Annotated, List
+from typing import Annotated, List, cast
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.params import Path
@@ -35,20 +35,17 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current_user)], db: Session = Depends(get_db)):
     """
     시험 일정들과 각 일정들의 남아있는 예약 슬롯을 반환합니다.
-    고객의 경우, 예약이 가능한 시험 일정만을 반환합니다. 이미 예약한 시험의 경우 결과에서 제외됩니다.
+    고객의 경우, 예약이 가능한 시험 일정만을 반환합니다. 이미 예약한 시험이거나 시험 시간이 지난 경우 결과에서 제외됩니다.
     어드민의 경우, 모든 시험 일정들을 반환합니다.
     """
     if current_user['role'] == 'admin':
         exam_schedules = db.query(models.ExamSchedule).all()
     else:
-        # Fetch exam schedules not reserved by the current user and within 3 days from now
+        date_range_start = datetime.datetime.now(datetime.UTC)
+        date_range_end = date_range_start + datetime.timedelta(days=3)
         exam_schedules = db.query(models.ExamSchedule) \
-            .filter(models.ExamSchedule.date_time < func.now() + datetime.timedelta(days=3)) \
-            .outerjoin(models.Reservation,
-                       (models.ExamSchedule.id == models.Reservation.exam_schedule_id) & (
-                               models.Reservation.user_id == current_user['id'])) \
-            .filter(or_(models.Reservation.id is None, models.Reservation.user_id != current_user['id'])) \
-            .all()
+            .filter(models.ExamSchedule.date_time.between(date_range_start, date_range_end),
+                    ~models.ExamSchedule.reservations.any(models.Reservation.user_id == int(current_user['id']))).all()
 
     schedules = []
 
