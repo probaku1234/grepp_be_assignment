@@ -174,10 +174,11 @@ class TestUserRoute:
         assert response.status_code == 422, response.text
 
     def test_login_should_return_token_when_successful_login(self, test_db_with_users):
+        user_id = 'user 1'
         response = client.post(
             "/users/login",
             json={
-                "user_id": 'user 1',
+                "user_id": user_id,
                 "password": '789456'
             }
         )
@@ -189,7 +190,7 @@ class TestUserRoute:
         token = data['token']
 
         payload = jwt.decode(token, JWT_SECRET, algorithms='HS256')
-        assert payload['user_id'] == 'user 1'
+        assert payload['user_id'] == user_id
 
 
 class TestExamRoute:
@@ -731,11 +732,12 @@ class TestExamRoute:
             assert response.status_code == 403, response.text
             assert response.json()["detail"] == "Only admins can confirm reservations"
 
-        def test_confirm_reservation_should_return_404_reservation_not_found(self, test_db_with_users):
+        @pytest.mark.parametrize("reservation_id", [1000, 999, -1])
+        def test_confirm_reservation_should_return_404_reservation_not_found(self, reservation_id, test_db_with_users):
             token = encode_jwt('2', 'admin 1', 'admin')
 
             response = client.put(
-                "/exam_schedule/confirm_reservation/999",
+                f"/exam_schedule/confirm_reservation/{reservation_id}",
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -752,7 +754,7 @@ class TestExamRoute:
             session.flush()
 
             response = client.put(
-                "/exam_schedule/confirm_reservation/1",
+                f"/exam_schedule/confirm_reservation/{reservation.id}",
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -769,7 +771,7 @@ class TestExamRoute:
             session.flush()
 
             response = client.put(
-                "/exam_schedule/confirm_reservation/1",
+                f"/exam_schedule/confirm_reservation/{reservation.id}",
                 headers={"Authorization": f"Bearer {token}"}
             )
 
@@ -800,11 +802,12 @@ class TestExamRoute:
 
             assert response.status_code == 403, response.text
 
-        def test_edit_reservation_should_return_404_when_reservation_not_found(self, test_db):
+        @pytest.mark.parametrize("reservation_id", [1000, 999, -1])
+        def test_edit_reservation_should_return_404_when_reservation_not_found(self, reservation_id, test_db):
             token = encode_jwt('1', 'client_user', 'client')
 
             response = client.put(
-                "/exam_schedule/edit_reservation/1000",
+                f"/exam_schedule/edit_reservation/{reservation_id}",
                 headers={"Authorization": f"Bearer {token}"},
                 json={"comment": "New Comment"}
             )
@@ -915,11 +918,12 @@ class TestExamRoute:
 
             assert response.status_code == 403, response.text
 
-        def test_delete_reservation_should_return_404_when_not_found(self, test_db_with_users):
+        @pytest.mark.parametrize("reservation_id", [1000, 999, -1])
+        def test_delete_reservation_should_return_404_when_not_found(self, reservation_id, test_db_with_users):
             token = encode_jwt('1', 'user 1', 'client')
 
             response = client.delete(
-                "/exam_schedule/delete_reservation/999",
+                f"/exam_schedule/delete_reservation/{reservation_id}",
                 headers={"Authorization": f"Bearer {token}"}
             )
 
