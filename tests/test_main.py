@@ -358,7 +358,7 @@ class TestExamRoute:
             assert response.status_code == 201, response.text
 
             session = TestingSessionLocal()
-            created_exam_schedule = session.query(ExamSchedule).get(1)
+            created_exam_schedule = session.get(ExamSchedule, 1)
             assert created_exam_schedule.name == test_name
             assert created_exam_schedule.date_time == datetime.datetime.strptime(test_date, '%Y-%m-%d %H:%M')
 
@@ -757,7 +757,7 @@ class TestExamRoute:
 
             # Assert that the reservation is now confirmed in the database
             session.refresh(reservation)
-            confirmed_reservation = session.query(Reservation).get(1)
+            confirmed_reservation = session.get(Reservation, 1)
             assert confirmed_reservation.confirmed
 
     class TestEditReservation:
@@ -867,7 +867,7 @@ class TestExamRoute:
 
             # Retrieve the updated reservation from the test database
             session.refresh(reservation)
-            updated_reservation = session.query(Reservation).get(1)
+            updated_reservation = session.get(Reservation, 1)
 
             # Assert that the reservation's comment has been updated
             assert updated_reservation.comment == new_comment
@@ -897,7 +897,7 @@ class TestExamRoute:
 
             # Retrieve the updated reservation from the test database
             session.refresh(reservation)
-            updated_reservation = session.query(Reservation).get(1)
+            updated_reservation = session.get(Reservation, 1)
 
             # Assert that the reservation's comment has been updated
             assert updated_reservation.comment == new_comment
@@ -1031,7 +1031,7 @@ class TestExamRoute:
 
             # Assert that the reservation is now deleted from the database
             session.expire_all()
-            deleted_reservation = session.query(Reservation).get(1)
+            deleted_reservation = session.get(Reservation, 1)
             assert deleted_reservation is None
 
         def test_delete_reservation_admin_delete_success(self, test_db_with_users_and_exam_schedules):
@@ -1058,7 +1058,7 @@ class TestExamRoute:
 
             # Assert that the reservation is now deleted from the database
             session.expire_all()
-            deleted_reservation = session.query(Reservation).get(1)
+            deleted_reservation = session.get(Reservation, 1)
             assert deleted_reservation is None
 
 
