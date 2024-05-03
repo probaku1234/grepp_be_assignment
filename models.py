@@ -32,5 +32,5 @@ class Reservation(Base):
     user = relationship('User', back_populates='reservations')
     exam_schedule_id = Column(Integer, ForeignKey('exam_schedules.id'))
     schedule = relationship('ExamSchedule', back_populates='reservations')
-    comment = Column(Text, nullable=False, default="")
+    comment = Column(Text, nullable=False, default='')
     confirmed = Column(Boolean, nullable=False, default=False)

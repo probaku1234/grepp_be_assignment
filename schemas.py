@@ -36,8 +36,8 @@ class ExamScheduleBase(BaseModel):
 class CreateExamSchedule(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
-    name: str = Field(description="시험 이름", examples=['Exam 1'])
-    date_time: FutureDatetime = Field(description="시험 날짜", examples=['2025-02-20 12:30'])
+    name: str = Field(description='시험 이름', examples=['Exam 1'])
+    date_time: FutureDatetime = Field(description='시험 날짜', examples=['2025-02-20 12:30'])
 
 
 class GetExamSchedule(ExamScheduleBase):
@@ -57,4 +57,4 @@ class ReservationBase(BaseModel):
 class MakeEditReservation(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
-    comment: str = Field(description="예약 신청의 코멘트", examples=['코멘트'])
+    comment: str = Field(description='예약 신청의 코멘트', examples=['코멘트'])

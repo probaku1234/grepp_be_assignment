@@ -10,7 +10,7 @@ load_dotenv()
 
 
 def _insert_user(data, cursor: DBAPICursor):
-    query = "INSERT INTO users(id, user_id, password, role) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING;"
+    query = 'INSERT INTO users(id, user_id, password, role) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING;'
 
     cursor.execute(query, data)
 
@@ -19,8 +19,8 @@ def init_data():
     if os.environ.get('environment', 'dev') == 'test':
         return
 
-    with open('data/users.csv', "r", encoding='utf-8') as data:
-        print("---inserting user data started---")
+    with open('data/users.csv', 'r', encoding='utf-8') as data:
+        print('---inserting user data started---')
         conn = engine.raw_connection()
 
         cursor = conn.cursor()
@@ -29,7 +29,7 @@ def init_data():
         for line in data:
             _insert_user(line, cursor)
 
-        print("---inserting user data ended---")
+        print('---inserting user data ended---')
         conn.commit()
 
     with engine.connect() as conn:
