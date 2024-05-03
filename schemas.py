@@ -54,7 +54,7 @@ class ReservationBase(BaseModel):
     confirmed: bool
 
 
-class MakeReservation(BaseModel):
+class MakeEditReservation(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
     comment: str = Field(description="예약 신청의 코멘트", examples=['코멘트'])

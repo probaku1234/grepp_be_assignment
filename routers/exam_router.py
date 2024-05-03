@@ -148,7 +148,7 @@ def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
         }
     })
 def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
-                     make_reservation_request: schemas.MakeReservation,
+                     make_reservation_request: schemas.MakeEditReservation,
                      db: Session = Depends(get_db),
                      exam_schedule_id: int = Path(..., description='예약을 신청할 시험 일정의 `id`')):
     """
@@ -319,6 +319,71 @@ def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_curren
 
     # Return a message indicating successful confirmation
     return {"message": "Reservation confirmed successfully"}
+
+
+@exam_router.put('/edit_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], responses={
+    200: {
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation comment updated successfully"}
+            }
+        }
+    },
+    404: {
+        "description": "`reservation_id`값을 가진 예약이 없는 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation not found"}
+            }
+        }
+    },
+    400: {
+        "description": "예약이 이미 확정된 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit confirmed reservation"}
+            }
+        }
+    },
+    403: {
+        "description": "현재 유저가 client인 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit other users' reservations"}
+            }
+        }
+    }
+})
+def edit_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+                     edit_reservation_request: schemas.MakeEditReservation,
+                     db: Session = Depends(get_db),
+                     reservation_id: int = Path(..., description='수정할 예약 신청의 `id`')):
+    """
+    예약신청의 코멘트를 수정합니다.
+    클라이언트 유저는 본인이 신청한 예약만 수정할 수 있습니다.
+    어드민 유저는 다른 클라이언트 유저의 예약 신청을 수정할 수 있습니다.
+    이미 확정된 예약은 수정이 불가능합니다.
+    """
+    # Retrieve the reservation from the database
+    reservation = db.query(models.Reservation).filter(models.Reservation.id == reservation_id).first()
+
+    # Check if the reservation exists
+    if not reservation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+    # Check if the reservation is confirmed
+    if reservation.confirmed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot edit confirmed reservation")
+
+    # Check if the current user is a client and owns the reservation
+    if current_user['role'] == 'client' and reservation.user_id != int(current_user['id']):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot edit other users' reservations")
+
+    # Update the reservation's comment
+    reservation.comment = edit_reservation_request.comment
+    db.commit()
+
+    return {"message": "Reservation comment updated successfully"}
 
 
 @exam_router.delete('/delete_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], responses={

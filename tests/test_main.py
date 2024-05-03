@@ -756,6 +756,148 @@ class TestExamRoute:
             confirmed_reservation = session.query(Reservation).get(1)
             assert confirmed_reservation.confirmed
 
+    class TestEditReservation:
+        def test_edit_reservation_should_return_403_with_no_token(self, test_db):
+            response = client.put(
+                "/exam_schedule/edit_reservation/1",
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_edit_reservation_should_return_403_with_invalid_token(self, test_db):
+            response = client.put(
+                "/exam_schedule/edit_reservation/1",
+
+                headers={
+                    "Authorization": "Bearer invalid_token"
+                }
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_edit_reservation_should_return_404_when_reservation_not_found(self, test_db):
+            # Generate a JWT token for the client user
+            token = encode_jwt('1', 'client_user', 'client')
+
+            # Send a request to the edit_reservation endpoint with a non-existing reservation_id
+            response = client.put(
+                "/exam_schedule/edit_reservation/1000",  # Assuming reservation with ID 1000 does not exist
+                headers={"Authorization": f"Bearer {token}"},
+                json={"comment": "New Comment"}
+            )
+
+            # Assert that the response status code is 404
+            assert response.status_code == 404
+
+            # Assert that the response message indicates that the reservation was not found
+            assert response.json() == {"detail": "Reservation not found"}
+
+        def test_edit_reservation_should_return_400_when_edit_confirmed_reservation(self, test_db_with_users_and_exam_schedules):
+            # Create a confirmed reservation in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, comment="Old Comment", confirmed=True)
+            session.add(reservation)
+            session.flush()
+
+            # Generate a JWT token for the admin user
+            token = encode_jwt('2', 'admin_user', 'admin')
+
+            # Send a request to the edit_reservation endpoint with the generated token and reservation_id
+            response = client.put(
+                f"/exam_schedule/edit_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"comment": "New Comment"}
+            )
+
+            # Assert that the response status code is 400
+            assert response.status_code == 400
+
+            # Assert that the response message indicates that the reservation cannot be edited
+            assert response.json() == {"detail": "Cannot edit confirmed reservation"}
+
+        def test_edit_reservation_client_editing_other_user_reservation(self, test_db_with_users_and_exam_schedules):
+            # Create a reservation owned by user 2 in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=2, comment="Old Comment", confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Generate a JWT token for user 1 (client user)
+            token = encode_jwt('1', 'client_user', 'client')
+
+            # Send a request to the edit_reservation endpoint with the generated token and reservation_id
+            response = client.put(
+                f"/exam_schedule/edit_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"comment": "New Comment"}
+            )
+
+            # Assert that the response status code is 403
+            assert response.status_code == 403
+
+            # Assert that the response message indicates that the client user cannot edit other users' reservations
+            assert response.json() == {"detail": "Cannot edit other users' reservations"}
+
+        def test_edit_reservation_success_for_client(self, test_db_with_users_and_exam_schedules):
+            # Create a reservation owned by the client user in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, comment="Old Comment", confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Generate a JWT token for the client user
+            token = encode_jwt('1', 'client_user', 'client')
+
+            # Define the new comment for the reservation
+            new_comment = "New Comment"
+
+            # Send a request to the edit_reservation endpoint with the generated token and reservation_id
+            response = client.put(
+                f"/exam_schedule/edit_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"comment": new_comment}
+            )
+
+            # Assert that the response status code is 200
+            assert response.status_code == 200
+
+            # Retrieve the updated reservation from the test database
+            session.refresh(reservation)
+            updated_reservation = session.query(Reservation).get(1)
+
+            # Assert that the reservation's comment has been updated
+            assert updated_reservation.comment == new_comment
+
+        def test_edit_reservation_success_for_admin(self, test_db_with_users_and_exam_schedules):
+            # Create a reservation in the test database
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, comment="Old Comment", confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            # Generate a JWT token for the admin user
+            token = encode_jwt('2', 'admin_user', 'admin')
+
+            # Define the new comment for the reservation
+            new_comment = "New Comment"
+
+            # Send a request to the edit_reservation endpoint with the generated token and reservation_id
+            response = client.put(
+                f"/exam_schedule/edit_reservation/{reservation.id}",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"comment": new_comment}
+            )
+
+            # Assert that the response status code is 200
+            assert response.status_code == 200
+
+            # Retrieve the updated reservation from the test database
+            session.refresh(reservation)
+            updated_reservation = session.query(Reservation).get(1)
+
+            # Assert that the reservation's comment has been updated
+            assert updated_reservation.comment == new_comment
+
     class TestDeleteReservation:
         def test_delete_reservation_should_return_403_with_no_token(self, test_db):
             response = client.delete(
