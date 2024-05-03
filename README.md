@@ -34,6 +34,7 @@ Python과 FastApi를 이용한 온라인 시험 플랫폼에서 고객과 어드
 |_📄 util.py  
 
 ### DB 구조
+<img width="672" alt="ERD" src="https://github.com/probaku1234/grepp_be_assignment/assets/10219906/3515fbfc-87b4-45c5-8a27-f41ced2378bb">
 
 * 유저 - 고객과 어드민 유저로 나뉩니다. (`role` column의 값으로 구분합니다. `client`/`admin`)
 * 시험 일정
