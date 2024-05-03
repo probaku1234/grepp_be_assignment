@@ -43,7 +43,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(
-    title='BE 개발자 과제',
+    title='BE 개발자 과제 API 문서',
     description=description,
     summary='시험 일정 예약 처리 시스템',
     openapi_tags=tags_metadata
