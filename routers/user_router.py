@@ -17,13 +17,15 @@ user_router = APIRouter(
 
 
 def _encrypt_password(password):
-    # Create an MD5 hash object
+    """
+    유저의 비밀번호를 암호화하는 함수입니다.
+    :param password:
+    :return:
+    """
     md5 = hashlib.md5()
 
-    # Update the hash object with the password
     md5.update(password.encode('utf-8'))
 
-    # Get the hexadecimal representation of the hash
     encrypted_password = md5.hexdigest()
 
     return encrypted_password

@@ -1,10 +1,10 @@
 import datetime
 from typing import Annotated, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.params import Path
-from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, text, or_
+from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 from fastapi.security import OAuth2PasswordBearer
 from starlette import status
 
@@ -38,22 +38,17 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
     어드민의 경우, 모든 시험 일정들을 반환합니다.
     """
     if current_user['role'] == 'admin':
-        # Fetch all exam schedules for admin
         exam_schedules = db.query(models.ExamSchedule).all()
     else:
-        # Fetch current user's ID
-        # current_user_id = db.query(models.User.id).filter(models.User.user_id == current_user['user_id']).scalar()
-
         # Fetch exam schedules not reserved by the current user and within 3 days from now
         exam_schedules = db.query(models.ExamSchedule) \
             .filter(models.ExamSchedule.date_time < func.now() + datetime.timedelta(days=3)) \
             .outerjoin(models.Reservation,
                        (models.ExamSchedule.id == models.Reservation.exam_schedule_id) & (
                                models.Reservation.user_id == current_user['id'])) \
-            .filter(or_(models.Reservation.id == None, models.Reservation.user_id != current_user['id'])) \
+            .filter(or_(models.Reservation.id is None, models.Reservation.user_id != current_user['id'])) \
             .all()
 
-        # Initialize schedules list
     schedules = []
 
     for exam_schedule in exam_schedules:
@@ -63,7 +58,6 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
                                              models.Reservation.confirmed.is_(True)) \
                                      .scalar() or 0
 
-        # Append exam schedule to schedules list
         schedules.append(schemas.GetExamSchedule(
             id=str(exam_schedule.id),
             name=exam_schedule.name,
@@ -180,7 +174,6 @@ def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Exam schedule has reached maximum reservations")
 
-    # Create a new reservation
     new_reservation = models.Reservation(
         user_id=current_user['id'],
         exam_schedule_id=exam_schedule_id,
@@ -213,7 +206,6 @@ def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_curren
     if current_user['role'] != 'client':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only clients can view their reservations")
 
-        # Retrieve the reservations for the current user
     reservations = db.query(models.Reservation).filter(models.Reservation.user_id == current_user['id']).all()
 
     return reservations
@@ -252,7 +244,6 @@ def get_user_reservations(current_user: Annotated[TokenPayload, Depends(get_curr
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User with {user_id} not found")
 
-        # Retrieve the reservations for the specified user_id
     reservations = db.query(models.Reservation).filter(models.Reservation.user_id == user_id).all()
 
     return reservations
@@ -298,26 +289,20 @@ def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_curren
     고객이 신청한 예약을 확정합니다.
     어드민 전용 API 입니다.
     """
-    # Check if the current user is an admin
     if current_user['role'] != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can confirm reservations")
 
-    # Retrieve the reservation from the database
     reservation = db.query(models.Reservation).filter(models.Reservation.id == reservation_id).first()
 
-    # Check if the reservation exists
     if not reservation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
-    # Check if the reservation is already confirmed
     if reservation.confirmed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reservation already confirmed")
 
-    # Update the reservation to set confirmed to True
     reservation.confirmed = True
     db.commit()
 
-    # Return a message indicating successful confirmation
     return {"message": "Reservation confirmed successfully"}
 
 
@@ -364,22 +349,17 @@ def edit_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
     어드민 유저는 다른 클라이언트 유저의 예약 신청을 수정할 수 있습니다.
     이미 확정된 예약은 수정이 불가능합니다.
     """
-    # Retrieve the reservation from the database
     reservation = db.query(models.Reservation).filter(models.Reservation.id == reservation_id).first()
 
-    # Check if the reservation exists
     if not reservation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
-    # Check if the reservation is confirmed
     if reservation.confirmed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot edit confirmed reservation")
 
-    # Check if the current user is a client and owns the reservation
     if current_user['role'] == 'client' and reservation.user_id != int(current_user['id']):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot edit other users' reservations")
 
-    # Update the reservation's comment
     reservation.comment = edit_reservation_request.comment
     db.commit()
 
@@ -418,24 +398,18 @@ def delete_reservation(current_user: Annotated[TokenPayload, Depends(get_current
     고객의 경우, 오직 본인이 신청한 예약만 삭제할 수 있습니다.
     어드민의 경우, 모든 유저들의 예약을 삭제할 수 있습니다.
     """
-    # Retrieve the reservation from the database
     reservation = db.query(models.Reservation).filter(models.Reservation.id == reservation_id).first()
 
-    # Check if the reservation exists
     if not reservation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
 
-    # Check if the user is a client
     if current_user['role'] == 'client':
-        # Check if the reservation belongs to the current user and is not confirmed
         if reservation.user_id != int(current_user['id']) or reservation.confirmed:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this reservation")
-    else:  # If the user is an admin
-        # Check if the reservation is confirmed
+    else:
         if reservation.confirmed:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete confirmed reservation")
 
-    # Delete the reservation from the database
     db.delete(reservation)
     db.commit()
 

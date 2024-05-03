@@ -1,3 +1,7 @@
+"""
+jWT 토큰 인증을 위한 미들웨어입니다. 각 endpoint에서 사용됩니다.
+"""
+
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 

@@ -1,3 +1,7 @@
+""""
+테스트용 유저 데이터를 만드는 데 사용됩니다. `users.csv`에서 데이터를 가져옵니다.
+"""
+
 from sqlalchemy.engine.interfaces import DBAPICursor
 from sqlalchemy.dialects.postgresql import insert
 from database import engine, Base

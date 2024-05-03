@@ -4,6 +4,9 @@ from sqlalchemy.orm import relationship
 
 
 class User(Base):
+    """
+    유저를 나타내는 클래스입니다. 유저가 클라이언트인지 어드민인지는 `role` 필드로 구분합니다
+    """
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, nullable=False)
@@ -15,6 +18,9 @@ class User(Base):
 
 
 class ExamSchedule(Base):
+    """
+    시험 일정을 나타내는 클래스입니다.
+    """
     __tablename__ = 'exam_schedules'
 
     id = Column(Integer, primary_key=True, nullable=False)
@@ -25,6 +31,9 @@ class ExamSchedule(Base):
 
 
 class Reservation(Base):
+    """
+    시험 일정 예약 신청을 나타내는 클래스입니다. 예약의 확정 여부는 `confirmed` 필드로 구분합니다.
+    """
     __tablename__ = 'reservations'
 
     id = Column(Integer, primary_key=True, nullable=False)
