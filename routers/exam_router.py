@@ -1,10 +1,10 @@
 import datetime
-from typing import Annotated, List, cast
+from typing import Annotated, List
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.params import Path
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from fastapi.security import OAuth2PasswordBearer
 from starlette import status
 
