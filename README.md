@@ -49,8 +49,6 @@ Python과 FastApi를 이용한 온라인 시험 플랫폼에서 고객과 어드
 2. 2개의 시험 일정을 삽입합니다.
     * 하나는 현재 시간으로부터 2일 후를, 다른 하나는 5일 후를 시험 시간으로 가지는 시험 일정을 삽입합니다.
 
-
-
 ### API DOC
 
 아래 링크에서 API 문서를 확인할 수 있습니다.
@@ -59,7 +57,7 @@ https://probaku1234.github.io/grepp_be_assignment/
 
 ### API 사용
 * 로컬에서 실행 시, port 8000 사용합니다.
-* [로그인 API](https://probaku1234.github.io/grepp_be_assignment/#tag/%EC%9C%A0%EC%A0%80/operation/%EB%A1%9C%EA%B7%B8%EC%9D%B8_users_login_post)를 사용해, 임의로 유저로 token을 발급 받아야 합니다.
+* [로그인 API](https://probaku1234.github.io/grepp_be_assignment/#tag/%EC%9C%A0%EC%A0%80/operation/%EB%A1%9C%EA%B7%B8%EC%9D%B8_users_login_post)를 사용해, 임의의 유저로 token을 발급 받아야 합니다.
 * API에 따라 고객 유저만 사용가능하거나 어드민 유저만 사용 가능한 경우도 있습니다.
 
 ## 로컬에서 프로젝트 실행
