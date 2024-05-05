@@ -59,15 +59,6 @@ class UtilTest:
         cursor.execute(query, data)
         conn.commit()
 
-    def insert_reservation_data(data: Tuple):
-        conn = engine.raw_connection()
-
-        cursor = conn.cursor()
-        query = 'INSERT OR IGNORE INTO exam_schedules(id, name, date_time) VALUES (?, ?, ?);'
-
-        cursor.execute(query, data)
-        conn.commit()
-
 
 @pytest.fixture()
 def test_db():

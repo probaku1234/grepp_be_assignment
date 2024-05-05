@@ -19,8 +19,6 @@ user_router = APIRouter(
 def _encrypt_password(password):
     """
     유저의 비밀번호를 암호화하는 함수입니다.
-    :param password:
-    :return:
     """
     md5 = hashlib.md5()
 
