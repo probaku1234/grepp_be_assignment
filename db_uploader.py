@@ -13,6 +13,7 @@ load_dotenv()
 
 
 def init_data():
+    # 테스트 실행 시에는 사전 데이터 실행 스킵
     if os.environ.get('environment', 'dev') == 'test':
         return
 
