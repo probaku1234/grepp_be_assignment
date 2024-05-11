@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 
-from database import engine
-import models
-from db_uploader import init_data
-from routers.user_router import user_router
-from routers.exam_router import exam_router
+from db.database import engine
+from db import models
+from db.db_uploader import init_data
+from routers import api
 import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
@@ -49,8 +48,7 @@ app = FastAPI(
     openapi_tags=tags_metadata
 )
 
-app.include_router(user_router)
-app.include_router(exam_router)
+app.include_router(api.router)
 
 
 @app.get('/', name="Hello World!")

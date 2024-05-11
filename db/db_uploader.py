@@ -17,7 +17,7 @@ def init_data():
     if os.environ.get('environment', 'dev') == 'test':
         return
 
-    with open('data/users.csv', 'r', encoding='utf-8') as data:
+    with open('../data/users.csv', 'r', encoding='utf-8') as data:
         print('---inserting user data started---')
         conn = engine.connect()
 
@@ -40,18 +40,18 @@ def init_data():
         conn.commit()
         conn.close()
 
-    with engine.connect() as conn:
-        exam_table = Base.metadata.tables['exam_schedules']
-
-        exam1_insert_stmt = insert(exam_table).values(name='exam 1',
-                                                      date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-                                                          days=2)).on_conflict_do_nothing()
-        exam2_insert_stmt = insert(exam_table).values(name='exam 2',
-                                                      date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-                                                          days=5)).on_conflict_do_nothing()
-
-        conn.execute(exam1_insert_stmt)
-        conn.execute(exam2_insert_stmt)
-        conn.commit()
+    # with engine.connect() as conn:
+    #     exam_table = Base.metadata.tables['exam_schedules']
+    #
+    #     exam1_insert_stmt = insert(exam_table).values(name='exam 1',
+    #                                                   date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+    #                                                       days=2)).on_conflict_do_nothing()
+    #     exam2_insert_stmt = insert(exam_table).values(name='exam 2',
+    #                                                   date_time=datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+    #                                                       days=5)).on_conflict_do_nothing()
+    #
+    #     conn.execute(exam1_insert_stmt)
+    #     conn.execute(exam2_insert_stmt)
+    #     conn.commit()
 
     print('---inserting user data ended---')

@@ -1,10 +1,10 @@
 import hashlib
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from database import get_db
+from db.database import get_db
 from typing import List, Annotated
-import models
-import schemas
+from db import models
+from schemas import user
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -29,7 +29,7 @@ def _encrypt_password(password):
     return encrypted_password
 
 
-@user_router.get('/', response_model=List[schemas.UserBase], name='유저 검색')
+@user_router.get('/', response_model=List[user.UserBase], name='유저 검색')
 def get_users(db: Session = Depends(get_db), user_id:
 Annotated[
     str | None,
@@ -81,7 +81,7 @@ Annotated[
         }
     }
 })
-def login(login_user: schemas.LoginUser, db: Session = Depends(get_db)):
+def login(login_user: user.LoginUser, db: Session = Depends(get_db)):
     """
     입력한 `user_id`와 `password`로 로그인을 합니다.
     로그인에 성공할 경우 jwt token을 반환합니다. token의 유효기간은 생성일부터 24시간까지 입니다.

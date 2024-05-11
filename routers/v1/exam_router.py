@@ -8,11 +8,10 @@ from sqlalchemy import func
 from fastapi.security import OAuth2PasswordBearer
 from starlette import status
 
-import models
-import schemas
-from database import get_db
+from db import models
+from db.database import get_db
 from auth.auth_bearer import JWTBearer
-from schemas import TokenPayload
+from schemas import exam_schedule, reservation, user
 from util import decode_jwt
 
 MAX_RESERVATION_NUM = 50000
@@ -30,9 +29,9 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 
 # FIXME: if slot 0, exclude
-@exam_router.get('/', dependencies=[Depends(JWTBearer())], response_model=List[schemas.GetExamSchedule],
+@exam_router.get('/', dependencies=[Depends(JWTBearer())], response_model=List[exam_schedule.GetExamSchedule],
                  name='시험 일정 조회')
-def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current_user)], db: Session = Depends(get_db)):
+def get_exam_schedules(current_user: Annotated[user.TokenPayload, Depends(get_current_user)], db: Session = Depends(get_db)):
     """
     시험 일정들과 각 일정들의 남아있는 예약 슬롯을 반환합니다.
     고객의 경우, 예약이 가능한 시험 일정만을 반환합니다. 이미 예약한 시험이거나 시험 시간이 지난 경우 결과에서 제외됩니다.
@@ -56,7 +55,7 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
                                              models.Reservation.confirmed.is_(True)) \
                                      .scalar() or 0
 
-        schedules.append(schemas.GetExamSchedule(
+        schedules.append(exam_schedule.GetExamSchedule(
             id=str(exam_schedule.id),
             name=exam_schedule.name,
             date_time=exam_schedule.date_time,
@@ -67,7 +66,7 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
 
 
 @exam_router.post('/', name='시험 일정 생성', dependencies=[Depends(JWTBearer())], status_code=status.HTTP_201_CREATED,
-                  response_model=schemas.ExamScheduleBase, responses={
+                  response_model=exam_schedule.ExamScheduleBase, responses={
         400: {
             "description": "주어진 `name`을 가진 시험 일정이 이미 존재하는 경우",
             "content": {
@@ -85,8 +84,8 @@ def get_exam_schedules(current_user: Annotated[TokenPayload, Depends(get_current
             }
         }
     })
-def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
-                         current_user: Annotated[TokenPayload, Depends(get_current_user)],
+def create_exam_schedule(create_schedule: exam_schedule.CreateExamSchedule,
+                         current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                          db: Session = Depends(get_db)):
     """
     새로운 시험 일정을 만듭니다. 시험의 이름은 반드시 고유해야 하며, 시험 날짜는 현재보다 이후의 시간이여야 합니다.
@@ -113,7 +112,7 @@ def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
 
 # FIXME: output schema
 @exam_router.post('/make_reservation/{exam_schedule_id}', dependencies=[Depends(JWTBearer())],
-                  status_code=status.HTTP_201_CREATED, response_model=schemas.ReservationBase, name='시험 일정 예약신청',
+                  status_code=status.HTTP_201_CREATED, response_model=reservation.ReservationBase, name='시험 일정 예약신청',
                   responses={
                       404: {
                           "description": "`exam_schedule_id`값을 가진 시험 일정이 없는 경우",
@@ -140,8 +139,8 @@ def create_exam_schedule(create_schedule: schemas.CreateExamSchedule,
                           }
                       }
                   })
-def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
-                     make_reservation_request: schemas.MakeEditReservation,
+def make_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                     make_reservation_request: reservation.MakeEditReservation,
                      db: Session = Depends(get_db),
                      exam_schedule_id: int = Path(..., description='예약을 신청할 시험 일정의 `id`')):
     """
@@ -186,7 +185,7 @@ def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
 
 
 @exam_router.get('/my_reservation', dependencies=[Depends(JWTBearer())], name='내 예약 신청 조회',
-                 response_model=List[schemas.ReservationBase],
+                 response_model=List[reservation.ReservationBase],
                  responses={
                      403: {
                          "description": "현재 유저가 admin인 경우",
@@ -197,7 +196,7 @@ def make_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
                          }
                      }
                  })
-def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+def get_my_reservations(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db)):
     """
     현재 유저가 신청한 모든 예약 일정을 반환합니다.
@@ -212,7 +211,7 @@ def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_curren
 
 
 @exam_router.get('/user_reservation/{user_id}', dependencies=[Depends(JWTBearer())],
-                 response_model=List[schemas.ReservationBase], name='예약 신청 조회', responses={
+                 response_model=List[reservation.ReservationBase], name='예약 신청 조회', responses={
         400: {
             "description": "`user_id`값을 가진 유저가 없는 경우",
             "content": {
@@ -230,7 +229,7 @@ def get_my_reservations(current_user: Annotated[TokenPayload, Depends(get_curren
             }
         }
     })
-def get_user_reservations(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+def get_user_reservations(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                           db: Session = Depends(get_db),
                           user_id: int = Path(..., description='예약 신청 목록을 조회할 유저의 `id`')):
     """
@@ -283,7 +282,7 @@ def get_user_reservations(current_user: Annotated[TokenPayload, Depends(get_curr
                          }
                      }
                  })
-def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+def confirm_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db),
                         reservation_id: int = Path(..., description='확정할 예약 신청의 `id`')):
     """
@@ -340,8 +339,8 @@ def confirm_reservation(current_user: Annotated[TokenPayload, Depends(get_curren
         }
     }
 })
-def edit_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
-                     edit_reservation_request: schemas.MakeEditReservation,
+def edit_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                     edit_reservation_request: reservation.MakeEditReservation,
                      db: Session = Depends(get_db),
                      reservation_id: int = Path(..., description='수정할 예약 신청의 `id`')):
     """
@@ -393,7 +392,7 @@ def edit_reservation(current_user: Annotated[TokenPayload, Depends(get_current_u
                             }
                         }
                     })
-def delete_reservation(current_user: Annotated[TokenPayload, Depends(get_current_user)],
+def delete_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                        db: Session = Depends(get_db), reservation_id: int = Path(..., description='삭제할 예약 신청의 `id`')):
     """
     특정 시험 예약을 삭제합니다. 아직 확정되지 않은 예약만 삭제 가능합니다.

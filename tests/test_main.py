@@ -13,11 +13,11 @@ import os
 from typing import Tuple
 import datetime
 
-import models
-from database import Base, get_db
+from db import models
+from db.database import Base, get_db
 from main import app
-from models import Reservation, ExamSchedule
-from routers.exam_router import MAX_RESERVATION_NUM
+from db.models import Reservation, ExamSchedule
+from routers.v1.exam_router import MAX_RESERVATION_NUM
 from util import encode_jwt, decode_jwt
 
 load_dotenv()
