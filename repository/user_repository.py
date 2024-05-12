@@ -12,9 +12,13 @@ class UserRepository:
         users = self.session.query(User).all()
         return [UserBase(**user.__dict__) for user in users]
 
-    def get_by_user_id_role(self):
-        pass
+    def get_by_user_id_role(self, user_id, role) -> List[Optional[UserBase]]:
+        users = self.session.query(User).filter(
+            User.user_id.contains(user_id),
+            User.role.contains(role)
+        )
+        return [UserBase(**user.__dict__) for user in users]
 
-    def user_exists_by_user_id_password(self, user_id, password) -> bool:
+    def get_by_user_id_password(self, user_id, password) -> Optional[UserBase]:
         user = self.session.query(User).filter_by(user_id=user_id, password=password).first()
-        return user is not None
+        return user

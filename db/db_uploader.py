@@ -3,7 +3,7 @@
 """
 
 from sqlalchemy.dialects.postgresql import insert
-from database import engine, Base
+from db.database import engine, Base
 import csv
 from dotenv import load_dotenv
 import os

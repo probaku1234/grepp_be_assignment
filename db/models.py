@@ -1,7 +1,9 @@
-from database import Base
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import PrimaryKeyConstraint
+
+from db.database import Base
+
 
 class User(Base):
     """
@@ -44,6 +46,7 @@ class Reservation(Base):
     comment = Column(Text, nullable=False, default='')
     confirmed = Column(Boolean, nullable=False, default=False)
 
+    # composite primary key
     __table_args__ = (
         PrimaryKeyConstraint('user_id', 'exam_schedule_id'),
     )

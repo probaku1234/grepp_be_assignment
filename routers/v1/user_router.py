@@ -8,6 +8,7 @@ from schemas import user
 from sqlalchemy.orm import Session
 from starlette import status
 
+from service.user_service import UserService
 from util import encode_jwt
 
 user_router = APIRouter(
@@ -50,17 +51,8 @@ Annotated[
     """
     유저들의 리스트를 반환합니다. `user_id`와 `role`을 통해 검색할 수 있습니다. 만약 파라미터가 주어지지 않는다면 모든 유저들을 반환합니다. 테스트용 API 입니다.
     """
-    user_id = user_id if user_id else ""
-    if role:
-        users = db.query(models.User).filter(
-            models.User.user_id.contains(user_id), models.User.role == role
-        )
-    else:
-        users = db.query(models.User).filter(
-            models.User.user_id.contains(user_id)
-        )
-
-    return users
+    user_service = UserService(db)
+    return user_service.search_users(user_id, role)
 
 
 @user_router.post('/login', name='로그인', responses={
@@ -86,12 +78,5 @@ def login(login_user: user.LoginUser, db: Session = Depends(get_db)):
     입력한 `user_id`와 `password`로 로그인을 합니다.
     로그인에 성공할 경우 jwt token을 반환합니다. token의 유효기간은 생성일부터 24시간까지 입니다.
     """
-    user = db.query(models.User).filter(
-        models.User.user_id == login_user.user_id and models.User.password == _encrypt_password(
-            login_user.password)).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"The id or password is not right")
-
-    # create jwt token and return
-    return {'token': encode_jwt(user.id, user.user_id, user.role)}
+    user_service = UserService(db)
+    return user_service.login(login_user)
