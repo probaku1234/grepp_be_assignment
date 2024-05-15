@@ -1,22 +1,19 @@
-import datetime
 from typing import Annotated, List
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.params import Path
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from fastapi.security import OAuth2PasswordBearer
+
 from starlette import status
 
 from db import models
 from db.database import get_db
 from auth.auth_bearer import JWTBearer
 from schemas import exam_schedule, reservation, user
-from util import decode_jwt
+from service.exam_schedule_service import ExamScheduleService
+from util import get_current_user
 
 MAX_RESERVATION_NUM = 50000
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 exam_router = APIRouter(
     prefix='/exam_schedule',
@@ -24,11 +21,6 @@ exam_router = APIRouter(
 )
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-    return decode_jwt(token)
-
-
-# FIXME: if slot 0, exclude
 @exam_router.get('/', dependencies=[Depends(JWTBearer())], response_model=List[exam_schedule.GetExamSchedule],
                  name='시험 일정 조회')
 def get_exam_schedules(current_user: Annotated[user.TokenPayload, Depends(get_current_user)], db: Session = Depends(get_db)):
@@ -37,32 +29,8 @@ def get_exam_schedules(current_user: Annotated[user.TokenPayload, Depends(get_cu
     고객의 경우, 예약이 가능한 시험 일정만을 반환합니다. 이미 예약한 시험이거나 시험 시간이 지난 경우 결과에서 제외됩니다.
     어드민의 경우, 모든 시험 일정들을 반환합니다.
     """
-    if current_user['role'] == 'admin':
-        exam_schedules = db.query(models.ExamSchedule).all()
-    else:
-        date_range_start = datetime.datetime.now(datetime.UTC)
-        date_range_end = date_range_start + datetime.timedelta(days=3)
-        exam_schedules = db.query(models.ExamSchedule) \
-            .filter(models.ExamSchedule.date_time.between(date_range_start, date_range_end),
-                    ~models.ExamSchedule.reservations.any(models.Reservation.user_id == int(current_user['id']))).all()
-
-    schedules = []
-
-    for exam_schedule in exam_schedules:
-        # Count confirmed reservations for the exam schedule
-        confirmed_schedule_num = db.query(func.count(models.Reservation.id)) \
-                                     .filter(models.Reservation.exam_schedule_id == exam_schedule.id,
-                                             models.Reservation.confirmed.is_(True)) \
-                                     .scalar() or 0
-
-        schedules.append(exam_schedule.GetExamSchedule(
-            id=str(exam_schedule.id),
-            name=exam_schedule.name,
-            date_time=exam_schedule.date_time,
-            remain_slot=MAX_RESERVATION_NUM - confirmed_schedule_num
-        ))
-
-    return schedules
+    exam_schedule_service = ExamScheduleService(db)
+    return exam_schedule_service.get_schedules(current_user)
 
 
 @exam_router.post('/', name='시험 일정 생성', dependencies=[Depends(JWTBearer())], status_code=status.HTTP_201_CREATED,
@@ -91,27 +59,13 @@ def create_exam_schedule(create_schedule: exam_schedule.CreateExamSchedule,
     새로운 시험 일정을 만듭니다. 시험의 이름은 반드시 고유해야 하며, 시험 날짜는 현재보다 이후의 시간이여야 합니다.
     어드민 전용 API 입니다.
     """
-    if current_user['role'] != 'admin':
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin can make exam schedules")
-
-    exam_schedule = db.query(models.ExamSchedule).filter(models.ExamSchedule.name == create_schedule.name).first()
-    if exam_schedule:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Exam schedule's name must be unique. Please use other name.")
-
-    new_exam_schedule = models.ExamSchedule(
-        name=create_schedule.name,
-        date_time=create_schedule.date_time
-    )
-    db.add(new_exam_schedule)
-    db.commit()
-    db.refresh(new_exam_schedule)
-
-    return new_exam_schedule
+    exam_schedule_service = ExamScheduleService(db)
+    return exam_schedule_service.create_schedule(current_user, create_schedule)
 
 
 # FIXME: output schema
-@exam_router.post('/make_reservation/{exam_schedule_id}', dependencies=[Depends(JWTBearer())],
+@exam_router.post('/make_reservation/{exam_schedule_id}',
+                  dependencies=[Depends(JWTBearer())],
                   status_code=status.HTTP_201_CREATED, response_model=reservation.ReservationBase, name='시험 일정 예약신청',
                   responses={
                       404: {
@@ -140,7 +94,7 @@ def create_exam_schedule(create_schedule: exam_schedule.CreateExamSchedule,
                       }
                   })
 def make_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
-                     make_reservation_request: reservation.MakeEditReservation,
+                     make_reservation_request: reservation.MakeEditReservationInput,
                      db: Session = Depends(get_db),
                      exam_schedule_id: int = Path(..., description='예약을 신청할 시험 일정의 `id`')):
     """
@@ -340,7 +294,7 @@ def confirm_reservation(current_user: Annotated[user.TokenPayload, Depends(get_c
     }
 })
 def edit_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
-                     edit_reservation_request: reservation.MakeEditReservation,
+                     edit_reservation_request: reservation.MakeEditReservationInput,
                      db: Session = Depends(get_db),
                      reservation_id: int = Path(..., description='수정할 예약 신청의 `id`')):
     """

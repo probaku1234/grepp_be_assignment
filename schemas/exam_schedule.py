@@ -7,6 +7,7 @@ from typing_extensions import Self
 class ExamScheduleBase(BaseModel):
     model_config = ConfigDict(extra='ignore')
 
+    id: int
     name: str
     start_time: datetime.datetime
     end_time: datetime.datetime
@@ -39,5 +40,10 @@ class CreateExamSchedule(BaseModel):
         return value
 
 
-class GetExamSchedule(ExamScheduleBase):
+class GetExamSchedule(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    name: str
+    start_time: datetime.datetime
+    end_time: datetime.datetime
     remain_slot: int
