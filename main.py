@@ -1,14 +1,12 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from db.database import engine
 from db import models
-from db.db_uploader import init_data
+from db.db_uploader import insert_user_data
 from routers import api
 import uvicorn
 
-models.Base.metadata.create_all(bind=engine)
-
-init_data()
 
 description = """
 시험 일정 예약 시스템 API
@@ -41,11 +39,19 @@ tags_metadata = [
     }
 ]
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    models.Base.metadata.create_all(bind=engine)
+    insert_user_data()
+    yield
+
 app = FastAPI(
     title='BE 개발자 과제 API 문서',
     description=description,
     summary='시험 일정 예약 처리 시스템',
-    openapi_tags=tags_metadata
+    openapi_tags=tags_metadata,
+    lifespan=lifespan
 )
 
 app.include_router(api.router)

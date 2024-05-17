@@ -12,12 +12,12 @@ import datetime
 load_dotenv()
 
 
-def init_data():
+def insert_user_data():
     # 테스트 실행 시에는 사전 데이터 실행 스킵
     if os.environ.get('environment', 'dev') == 'test':
         return
 
-    with open('../data/users.csv', 'r', encoding='utf-8') as data:
+    with open('data/users.csv', 'r', encoding='utf-8') as data:
         print('---inserting user data started---')
         conn = engine.connect()
 
