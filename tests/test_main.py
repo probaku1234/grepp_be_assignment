@@ -54,7 +54,7 @@ class UtilTest:
         conn = engine.raw_connection()
 
         cursor = conn.cursor()
-        query = 'INSERT OR IGNORE INTO exam_schedules(id, name, date_time) VALUES (?, ?, ?);'
+        query = 'INSERT OR IGNORE INTO exam_schedules(id, name, start_time, end_time) VALUES (?, ?, ?, ?);'
 
         cursor.execute(query, data)
         conn.commit()
