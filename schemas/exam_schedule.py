@@ -1,6 +1,7 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict, FutureDatetime, Field, field_validator,model_validator
+from pydantic import BaseModel, ConfigDict, FutureDatetime, Field, field_validator, model_validator
+from pydantic_core.core_schema import FieldValidationInfo
 from typing_extensions import Self
 
 
@@ -29,10 +30,11 @@ class CreateExamSchedule(BaseModel):
     start_time: FutureDatetime = Field(description='시험 날짜', examples=['2025-02-20 12:30'])
     end_time: FutureDatetime = Field(description='시험 날짜', examples=['2025-02-20 12:30'])
 
-    @field_validator('start_time')
+    @field_validator('end_time')
     @classmethod
-    def validate_start_time_end_time(cls, value: datetime.datetime, values, **kwargs) -> datetime.datetime:
-        start_date = values.get("start_time")
+    def validate_start_time_end_time(cls, value: datetime.datetime, info: FieldValidationInfo,
+                                     **kwargs) -> datetime.datetime:
+        start_date = info.data['start_time']
 
         if value <= start_date:
             raise ValueError("end time must be greater than the start time")
