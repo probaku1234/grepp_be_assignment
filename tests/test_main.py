@@ -82,9 +82,11 @@ def test_db_with_users_and_exam_schedules():
     UtilTest.insert_user_data((1, 'user 1', '71b3b26aaa319e0cdf6fdb8429c112b0', 'client'))
     UtilTest.insert_user_data((2, 'admin 1', '71b3b26aaa319e0cdf6fdb8429c112b0', 'admin'))
     UtilTest.insert_exam_schedule_data((1, 'exam 1', datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-        days=1)))
+        days=1), datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+        days=2)))
     UtilTest.insert_exam_schedule_data((2, 'exam 2', datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-        days=5)))
+        days=5), datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+        days=7)))
     yield
     Base.metadata.drop_all(bind=engine)
 

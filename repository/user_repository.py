@@ -22,3 +22,7 @@ class UserRepository:
     def get_by_user_id_password(self, user_id, password) -> Optional[UserBase]:
         user = self.session.query(User).filter_by(user_id=user_id, password=password).first()
         return user
+
+    def exist_by_id(self, _id: int) -> bool:
+        user = self.session.query(User).filter_by(id=_id)
+        return user is not None
