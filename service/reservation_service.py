@@ -8,7 +8,9 @@ from starlette import status
 
 from repository.user_repository import UserRepository
 from schemas.user import TokenPayload
-from schemas.reservation import MakeEditReservationOutput, MakeEditReservationInput, ReservationBase
+from schemas.base import MessageOutputBase
+from schemas.reservation import MakeEditReservationOutput, MakeEditReservationInput, ReservationBase, \
+    ConfirmReservationRequest
 from service.exam_schedule_service import MAX_RESERVATION_NUM
 
 
@@ -56,3 +58,22 @@ class ReservationService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User with {user_id} not found")
 
         return self.reservation_repository.get_by_user_id(user_id)
+
+    def confirm_reservation(self, current_user: TokenPayload,
+                            confirm_reservation_request: ConfirmReservationRequest) -> MessageOutputBase:
+        if current_user['role'] != 'admin':
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can confirm reservations")
+
+        reservation = self.reservation_repository.get_by_user_id_exam_id(user_id=confirm_reservation_request.user_id,
+                                                                         exam_schedule_id=confirm_reservation_request.exam_schedule_id)
+
+        if not reservation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+        if reservation.confirmed:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reservation already confirmed")
+
+        self.reservation_repository.update(reservation,
+                                           MakeEditReservationInput(comment=reservation.comment, confirmed=True))
+
+        return MessageOutputBase(message="Reservation confirmed successfully")

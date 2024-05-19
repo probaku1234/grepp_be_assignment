@@ -1,9 +1,9 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from db.models import Reservation
-from typing import List, Optional
+from typing import List, Optional, Type
 
-from schemas.reservation import MakeEditReservationOutput, ReservationBase
+from schemas.reservation import MakeEditReservationOutput, ReservationBase, MakeEditReservationInput
 
 
 class ReservationRepository:
@@ -13,6 +13,11 @@ class ReservationRepository:
     def get_by_user_id(self, user_id: int) -> List[Optional[ReservationBase]]:
         reservations = self.session.query(Reservation).filter_by(user_id=user_id)
         return [ReservationBase(**reservation.__dict__) for reservation in reservations]
+
+    def get_by_user_id_exam_id(self, exam_schedule_id: int, user_id: int) -> Type[Reservation]:
+        reservation = self.session.query(Reservation).filter_by(user_id=user_id,
+                                                                exam_schedule_id=exam_schedule_id).first()
+        return reservation
 
     def exist_by_user_id_exam_id(self, exam_schedule_id: int, user_id: int) -> bool:
         reservation = self.session.query(Reservation).filter_by(user_id=user_id, exam_schedule_id=exam_schedule_id)
@@ -35,3 +40,12 @@ class ReservationRepository:
             comment=reservation.comment,
             confirmed=reservation.confirmed
         )
+
+    def update(self, reservation: Type[Reservation], data: MakeEditReservationInput):
+        data_dict = data.dict()
+        if 'confirmed' in data_dict:
+            reservation.confirmed = data_dict['confirmed']
+
+        reservation.comment = data_dict['comment']
+        self.session.commit()
+        self.session.refresh(reservation)

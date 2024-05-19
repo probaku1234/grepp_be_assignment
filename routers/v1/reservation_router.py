@@ -9,7 +9,7 @@ from starlette import status
 from auth.auth_bearer import JWTBearer
 from db import models
 from db.database import get_db
-from schemas import reservation, user
+from schemas import reservation, user, base
 from service.reservation_service import ReservationService
 from util import get_current_user
 
@@ -51,8 +51,7 @@ reservation_router = APIRouter(
                              }
                          }
                          )
-def make_reservation(current_user: Annotated[user.TokenPayload,
-Depends(get_current_user)],
+def make_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                      make_reservation_request: reservation.MakeEditReservationInput,
                      db: Session = Depends(get_db),
                      exam_schedule_id: int = Path(..., description='예약을 신청할 시험 일정의 `id`')):
@@ -78,8 +77,7 @@ Depends(get_current_user)],
                                 }
                             }
                         })
-def get_my_reservations(current_user: Annotated[user.TokenPayload,
-Depends(get_current_user)],
+def get_my_reservations(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                         db: Session = Depends(get_db)):
     reservation_service = ReservationService(db)
     return reservation_service.get_my_reservation(current_user)
@@ -107,9 +105,53 @@ Depends(get_current_user)],
                                 }
                             }
                         })
-def get_user_reservations(current_user: Annotated[user.TokenPayload,
-Depends(get_current_user)],
+def get_user_reservations(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
                           db: Session = Depends(get_db),
                           user_id: int = Path(..., description='예약 신청 목록을 조회할 유저의 `id`')):
     reservation_service = ReservationService(db)
     return reservation_service.get_user_reservation(current_user, user_id)
+
+
+@reservation_router.put('/confirm_reservation',
+                        dependencies=[Depends(JWTBearer())],
+                        name='예약 신청 확정',
+                        response_model=base.MessageOutputBase,
+                        responses={
+                            200: {
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Reservation confirmed successfully"}
+                                    }
+                                }
+                            },
+                            404: {
+                                "description": "`reservation_id`값을 가진 예약이 없는 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Reservation not found"}
+                                    }
+                                }
+                            },
+                            400: {
+                                "description": "예약이 이미 확정된 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Reservation already confirmed"}
+                                    }
+                                }
+                            },
+                            403: {
+                                "description": "현재 유저가 client인 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Only admins can confirm reservations"}
+                                    }
+                                }
+                            }
+                        })
+def confirm_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                        confirm_reservation_request: reservation.ConfirmReservationRequest,
+                        db: Session = Depends(get_db)
+                        ):
+    reservation_service = ReservationService(db)
+    return reservation_service.confirm_reservation(current_user, confirm_reservation_request)

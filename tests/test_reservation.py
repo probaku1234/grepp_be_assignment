@@ -301,3 +301,109 @@ class TestGetUserReservations:
         response_data = response.json()
         assert isinstance(response_data, list)
         assert len(response_data) == 2
+
+    class TestConfirmReservations:
+        def test_confirm_reservation_should_return_403_with_no_token(self, test_db):
+            response = client.put(
+                "/api/v1/reservation/confirm_reservation",
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_confirm_reservation_should_return_403_with_invalid_token(self, test_db):
+            response = client.put(
+                "/api/v1/reservation/confirm_reservation",
+
+                headers={
+                    "Authorization": "Bearer invalid_token"
+                }
+            )
+
+            assert response.status_code == 403, response.text
+
+        def test_confirm_reservation_should_return_403_for_client(self, test_db_with_users):
+            token = encode_jwt('1', 'user 1', 'client')
+
+            response = client.put(
+                "/api/v1/reservation/confirm_reservation",
+                headers={
+                    "Authorization": f"Bearer {token}"
+                },
+                json={
+                    'user_id': 3,
+                    'exam_schedule_id': 4,
+                }
+            )
+
+            assert response.status_code == 403, response.text
+            assert response.json()["detail"] == "Only admins can confirm reservations"
+
+        @pytest.mark.parametrize("exam_schedule_id", [1000, 999, -1])
+        def test_confirm_reservation_should_return_404_reservation_not_found(self, exam_schedule_id,
+                                                                             test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            response = client.put(
+                f"/api/v1/reservation/confirm_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'user_id': 1,
+                    'exam_schedule_id': exam_schedule_id,
+                }
+            )
+
+            assert response.status_code == 404
+
+            assert response.json()["detail"] == "Reservation not found"
+
+        def test_confirm_reservation_already_confirmed(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            test_user_id = 2
+            test_exam_schedule_id = 1
+
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=test_user_id, exam_schedule_id=test_exam_schedule_id, confirmed=True)
+            session.add(reservation)
+            session.flush()
+
+            response = client.put(
+                f"/api/v1/reservation/confirm_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'user_id': test_user_id,
+                    'exam_schedule_id': test_exam_schedule_id,
+                }
+            )
+
+            assert response.status_code == 400
+
+            assert response.json()["detail"] == "Reservation already confirmed"
+
+        def test_confirm_reservation_success(self, test_db_with_users):
+            token = encode_jwt('2', 'admin 1', 'admin')
+
+            test_user_id = 2
+            test_exam_schedule_id = 1
+
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=test_user_id, exam_schedule_id=test_exam_schedule_id, confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            response = client.put(
+                f"/api/v1/reservation/confirm_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'user_id': test_user_id,
+                    'exam_schedule_id': test_exam_schedule_id,
+                }
+            )
+
+            assert response.status_code == 200
+
+            assert response.json()["message"] == "Reservation confirmed successfully"
+
+            session.refresh(reservation)
+            confirmed_reservation = session.get(Reservation, (test_user_id, test_exam_schedule_id))
+            assert confirmed_reservation.confirmed

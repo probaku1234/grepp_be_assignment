@@ -13,7 +13,7 @@ class ReservationBase(BaseModel):
 
 
 class MakeEditReservationInput(BaseModel):
-    model_config = ConfigDict(extra='ignore')
+    model_config = ConfigDict(extra='allow')
 
     comment: str = Field(description='예약 신청의 코멘트', examples=['코멘트'])
 
@@ -24,3 +24,11 @@ class MakeEditReservationOutput(BaseModel):
     exam_schedule_id: int
     comment: str
     confirmed: bool
+
+
+class ConfirmReservationRequest(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    user_id: int
+    exam_schedule_id: int
+
