@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy.schema import PrimaryKeyConstraint, Index
 
 from db.database import Base
 
@@ -18,6 +18,10 @@ class User(Base):
 
     reservations = relationship('Reservation', back_populates='user')
 
+    __table_args__ = (
+        Index('user_id', 'password'),
+    )
+
 
 class ExamSchedule(Base):
     """
@@ -25,7 +29,7 @@ class ExamSchedule(Base):
     """
     __tablename__ = 'exam_schedules'
 
-    id = Column(Integer, primary_key=True, nullable=False)
+    id = Column(Integer, primary_key=True, nullable=False, index=True)
     name = Column(String, nullable=False, unique=True)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
@@ -44,7 +48,7 @@ class Reservation(Base):
     exam_schedule_id = Column(Integer, ForeignKey('exam_schedules.id'), primary_key=True)
     schedule = relationship('ExamSchedule', back_populates='reservations')
     comment = Column(Text, nullable=False, default='')
-    confirmed = Column(Boolean, nullable=False, default=False)
+    confirmed = Column(Boolean, nullable=False, default=False, index=True)
 
     # composite primary key
     __table_args__ = (
