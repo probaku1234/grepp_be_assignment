@@ -155,3 +155,89 @@ def confirm_reservation(current_user: Annotated[user.TokenPayload, Depends(get_c
                         ):
     reservation_service = ReservationService(db)
     return reservation_service.confirm_reservation(current_user, confirm_reservation_request)
+
+
+@reservation_router.put('/edit_my_reservation', dependencies=[Depends(JWTBearer())], name='예약 신청 수정', responses={
+    200: {
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation comment updated successfully"}
+            }
+        }
+    },
+    404: {
+        "description": "`reservation_id`값을 가진 예약이 없는 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation not found"}
+            }
+        }
+    },
+    400: {
+        "description": "예약이 이미 확정된 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit confirmed reservation"}
+            }
+        }
+    },
+    403: {
+        "description": "현재 유저가 client인 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit other users' reservations"}
+            }
+        }
+    }
+})
+def edit_my_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                        edit_reservation_request: reservation.EditReservationClientInput,
+                        db: Session = Depends(get_db)
+                        ):
+    reservation_service = ReservationService(db)
+    return reservation_service.edit_reservation(current_user, current_user['id'],
+                                                edit_reservation_request.exam_schedule_id,
+                                                edit_reservation_request.comment)
+
+
+@reservation_router.put('/edit_user_reservation', dependencies=[Depends(JWTBearer())], name='예약 신청 수정', responses={
+    200: {
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation comment updated successfully"}
+            }
+        }
+    },
+    404: {
+        "description": "`reservation_id`값을 가진 예약이 없는 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Reservation not found"}
+            }
+        }
+    },
+    400: {
+        "description": "예약이 이미 확정된 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit confirmed reservation"}
+            }
+        }
+    },
+    403: {
+        "description": "현재 유저가 client인 경우",
+        "content": {
+            "application/json": {
+                "example": {"message": "Cannot edit other users' reservations"}
+            }
+        }
+    }
+})
+def edit_my_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                        edit_reservation_request: reservation.EditReservationAdminInput,
+                        db: Session = Depends(get_db)
+                        ):
+    reservation_service = ReservationService(db)
+    return reservation_service.edit_reservation(current_user, edit_reservation_request.user_id,
+                                                edit_reservation_request.exam_schedule_id,
+                                                edit_reservation_request.comment)

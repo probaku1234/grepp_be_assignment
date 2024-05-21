@@ -407,3 +407,124 @@ class TestGetUserReservations:
             session.refresh(reservation)
             confirmed_reservation = session.get(Reservation, (test_user_id, test_exam_schedule_id))
             assert confirmed_reservation.confirmed
+
+    class TestEditReservation:
+        @pytest.mark.parametrize("end_points", ['edit_my_reservation', 'edit_user_reservation'])
+        def test_edit_reservation_should_return_403_with_no_token(self, end_points, test_db):
+            response = client.put(
+                f"/api/v1/reservation/{end_points}",
+            )
+
+            assert response.status_code == 403, response.text
+
+        @pytest.mark.parametrize("end_points", ['edit_my_reservation', 'edit_user_reservation'])
+        def test_edit_reservation_should_return_403_with_invalid_token(self, end_points, test_db):
+            response = client.put(
+                f"/api/v1/reservation/{end_points}",
+
+                headers={
+                    "Authorization": "Bearer invalid_token"
+                }
+            )
+
+            assert response.status_code == 403, response.text
+
+        @pytest.mark.parametrize("exam_schedule_id", [1000, 999, -1])
+        @pytest.mark.parametrize("end_points", ['edit_my_reservation', 'edit_user_reservation'])
+        def test_edit_reservation_should_return_404_when_reservation_not_found(self, exam_schedule_id, end_points,
+                                                                               test_db):
+            token = encode_jwt('1', 'client_user', 'client')
+
+            request_body = {
+                "exam_schedule_id": exam_schedule_id,
+                "comment": "New Comment",
+            }
+            if end_points == 'edit_user_reservation':
+                request_body['user_id'] = 1
+
+            response = client.put(
+                f"/api/v1/reservation/{end_points}",
+                headers={"Authorization": f"Bearer {token}"},
+                json=request_body
+            )
+
+            assert response.status_code == 404
+
+            assert response.json() == {"detail": "Reservation not found"}
+
+        def test_edit_reservation_should_return_400_when_edit_confirmed_reservation(self,
+                                                                                    test_db_with_users_and_exam_schedules):
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, comment="Old Comment", confirmed=True)
+            session.add(reservation)
+            session.flush()
+
+            token = encode_jwt('2', 'admin_user', 'admin')
+
+            response = client.put(
+                f"/api/v1/reservation/edit_user_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "user_id": 1,
+                    "exam_schedule_id": reservation.exam_schedule_id,
+                    "comment": "New Comment",
+                }
+            )
+
+            assert response.status_code == 400
+
+            assert response.json() == {"detail": "Cannot edit confirmed reservation"}
+
+        def test_edit_reservation_success_for_client(self, test_db_with_users_and_exam_schedules):
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, comment="Old Comment", confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            token = encode_jwt('1', 'client_user', 'client')
+
+            new_comment = "New Comment"
+
+            response = client.put(
+                f"/api/v1/reservation/edit_my_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "exam_schedule_id": reservation.exam_schedule_id,
+                    "comment": new_comment,
+                }
+            )
+
+            assert response.status_code == 200
+
+            session.refresh(reservation)
+            updated_reservation = session.get(Reservation, (1, 1))
+
+            assert updated_reservation.comment == new_comment
+
+        def test_edit_reservation_success_for_admin(self, test_db_with_users_and_exam_schedules):
+            session = TestingSessionLocal()
+            reservation = Reservation(user_id=1, exam_schedule_id=1, comment="Old Comment", confirmed=False)
+            session.add(reservation)
+            session.flush()
+
+            token = encode_jwt('2', 'admin_user', 'admin')
+
+            new_comment = "New Comment"
+
+            response = client.put(
+                f"/api/v1/reservation/edit_user_reservation",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    'user_id': 1,
+                    "exam_schedule_id": reservation.exam_schedule_id,
+                    "comment": "New Comment",
+                }
+            )
+
+            assert response.status_code == 200
+
+            session.refresh(reservation)
+            updated_reservation = session.get(Reservation, (1, 1))
+
+            assert updated_reservation.comment == new_comment
+

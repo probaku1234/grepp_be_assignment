@@ -18,6 +18,14 @@ class MakeEditReservationInput(BaseModel):
     comment: str = Field(description='예약 신청의 코멘트', examples=['코멘트'])
 
 
+class EditReservationClientInput(MakeEditReservationInput):
+    exam_schedule_id: int
+
+
+class EditReservationAdminInput(EditReservationClientInput):
+    user_id: int
+
+
 class MakeEditReservationOutput(BaseModel):
     model_config = ConfigDict(extra='ignore')
 

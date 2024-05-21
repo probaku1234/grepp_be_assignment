@@ -77,3 +77,21 @@ class ReservationService:
                                            MakeEditReservationInput(comment=reservation.comment, confirmed=True))
 
         return MessageOutputBase(message="Reservation confirmed successfully")
+
+    def edit_reservation(self, current_user: TokenPayload, user_id: int, exam_schedule_id: int,
+                         comment: str) -> MessageOutputBase:
+        reservation = self.reservation_repository.get_by_user_id_exam_id(user_id=user_id,
+                                                                         exam_schedule_id=exam_schedule_id)
+
+        if not reservation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+        if reservation.confirmed:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot edit confirmed reservation")
+
+        if current_user['role'] == 'client' and reservation.user_id != int(current_user['id']):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot edit other users' reservations")
+
+        self.reservation_repository.update(reservation, MakeEditReservationInput(comment=comment))
+
+        return MessageOutputBase(message="Reservation comment updated successfully")
