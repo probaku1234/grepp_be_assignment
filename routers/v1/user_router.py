@@ -1,33 +1,15 @@
-import hashlib
-
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends, Query
 from db.database import get_db
 from typing import List, Annotated
-from db import models
 from schemas import user
 from sqlalchemy.orm import Session
-from starlette import status
 
 from service.user_service import UserService
-from util import encode_jwt
 
 user_router = APIRouter(
     prefix='/users',
     tags=['유저']
 )
-
-
-def _encrypt_password(password):
-    """
-    유저의 비밀번호를 암호화하는 함수입니다.
-    """
-    md5 = hashlib.md5()
-
-    md5.update(password.encode('utf-8'))
-
-    encrypted_password = md5.hexdigest()
-
-    return encrypted_password
 
 
 @user_router.get('/', response_model=List[user.UserBase], name='유저 검색')

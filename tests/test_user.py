@@ -1,4 +1,4 @@
-from tests.test_main import client, test_db_with_users, test_db, JWT_SECRET
+from tests.test_main import client, test_db_with_users, JWT_SECRET
 import jwt
 
 

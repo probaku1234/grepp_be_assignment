@@ -78,10 +78,9 @@ class ReservationService:
 
         return MessageOutputBase(message="Reservation confirmed successfully")
 
-    def edit_reservation(self, current_user: TokenPayload, user_id: int, exam_schedule_id: int,
+    def edit_reservation(self, current_user: TokenPayload, reservation_id: str,
                          comment: str) -> MessageOutputBase:
-        reservation = self.reservation_repository.get_by_user_id_exam_id(user_id=user_id,
-                                                                         exam_schedule_id=exam_schedule_id)
+        reservation = self.reservation_repository.get_by_id(reservation_id)
 
         if not reservation:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
@@ -95,3 +94,20 @@ class ReservationService:
         self.reservation_repository.update(reservation, MakeEditReservationInput(comment=comment))
 
         return MessageOutputBase(message="Reservation comment updated successfully")
+
+    def delete_reservation(self, current_user: TokenPayload, reservation_id: str) -> MessageOutputBase:
+        reservation = self.reservation_repository.get_by_id(reservation_id)
+
+        if not reservation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+
+        if current_user['role'] == 'client':
+            if reservation.user_id != int(current_user['id']) or reservation.confirmed:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete this reservation")
+        else:
+            if reservation.confirmed:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete confirmed reservation")
+
+        self.reservation_repository.delete(reservation)
+
+        return MessageOutputBase(message="Reservation deleted successfully")

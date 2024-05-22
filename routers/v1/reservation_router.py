@@ -1,13 +1,11 @@
-import datetime
 from typing import Annotated, List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends
 from fastapi.params import Path
 from sqlalchemy.orm import Session
 from starlette import status
 
 from auth.auth_bearer import JWTBearer
-from db import models
 from db.database import get_db
 from schemas import reservation, user, base
 from service.reservation_service import ReservationService
@@ -200,44 +198,78 @@ def edit_my_reservation(current_user: Annotated[user.TokenPayload, Depends(get_c
                                                 edit_reservation_request.comment)
 
 
-@reservation_router.put('/edit_user_reservation', dependencies=[Depends(JWTBearer())], name='예약 신청 수정', responses={
-    200: {
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation comment updated successfully"}
-            }
-        }
-    },
-    404: {
-        "description": "`reservation_id`값을 가진 예약이 없는 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Reservation not found"}
-            }
-        }
-    },
-    400: {
-        "description": "예약이 이미 확정된 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Cannot edit confirmed reservation"}
-            }
-        }
-    },
-    403: {
-        "description": "현재 유저가 client인 경우",
-        "content": {
-            "application/json": {
-                "example": {"message": "Cannot edit other users' reservations"}
-            }
-        }
-    }
-})
-def edit_my_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
-                        edit_reservation_request: reservation.EditReservationAdminInput,
-                        db: Session = Depends(get_db)
-                        ):
+@reservation_router.put('/edit_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], name='예약 신청 수정',
+                        responses={
+                            200: {
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Reservation comment updated successfully"}
+                                    }
+                                }
+                            },
+                            404: {
+                                "description": "`reservation_id`값을 가진 예약이 없는 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Reservation not found"}
+                                    }
+                                }
+                            },
+                            400: {
+                                "description": "예약이 이미 확정된 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Cannot edit confirmed reservation"}
+                                    }
+                                }
+                            },
+                            403: {
+                                "description": "현재 유저가 client인 경우",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"message": "Cannot edit other users' reservations"}
+                                    }
+                                }
+                            }
+                        })
+def edit_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                     edit_reservation_request: reservation.MakeEditReservationInput,
+                     db: Session = Depends(get_db),
+                     reservation_id: str = Path(..., description='수정할 예약 신청의 `id`')
+                     ):
     reservation_service = ReservationService(db)
-    return reservation_service.edit_reservation(current_user, edit_reservation_request.user_id,
-                                                edit_reservation_request.exam_schedule_id,
+    return reservation_service.edit_reservation(current_user, reservation_id,
                                                 edit_reservation_request.comment)
+
+
+@reservation_router.delete('/delete_reservation/{reservation_id}', dependencies=[Depends(JWTBearer())], name='예약 신청 삭제',
+                           responses={
+                               200: {
+                                   "content": {
+                                       "application/json": {
+                                           "example": {"message": "Reservation deleted successfully"}
+                                       }
+                                   }
+                               },
+                               404: {
+                                   "description": "`reservation_id`값을 가진 예약이 없는 경우",
+                                   "content": {
+                                       "application/json": {
+                                           "example": {"message": "Reservation not found"}
+                                       }
+                                   }
+                               },
+                               403: {
+                                   "description": "클라이언트 유저가 본인이 신청하지 않은 예약이나 이미 확정된 예약을 삭제할려는 경우, 어드민 유저가 이미 확정된 예약을 삭제할려는 경우",
+                                   "content": {
+                                       "application/json": {
+                                           "example": {"message": "Cannot delete this reservation"}
+                                       }
+                                   }
+                               }
+                           })
+def delete_reservation(current_user: Annotated[user.TokenPayload, Depends(get_current_user)],
+                       db: Session = Depends(get_db),
+                       reservation_id: str = Path(..., description='삭제할 예약 신청의 `id`')):
+    reservation_service = ReservationService(db)
+    return reservation_service.delete_reservation(current_user, reservation_id)

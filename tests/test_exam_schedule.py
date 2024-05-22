@@ -96,7 +96,7 @@ class TestExamScheduleRoute:
 
             session.commit()
 
-            reservation = Reservation(user_id='1', exam_schedule_id=exam_schedule.id, confirmed=True)
+            reservation = Reservation(id=1, user_id='1', exam_schedule_id=exam_schedule.id, confirmed=True)
             session.add(reservation)
             session.commit()
 
@@ -125,7 +125,7 @@ class TestExamScheduleRoute:
 
             session.commit()
 
-            reservation = Reservation(user_id='2', exam_schedule_id=exam_schedule.id, confirmed=True)
+            reservation = Reservation(id=1, user_id='2', exam_schedule_id=exam_schedule.id, confirmed=True)
             session.add(reservation)
             session.commit()
 

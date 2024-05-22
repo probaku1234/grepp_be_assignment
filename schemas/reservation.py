@@ -1,6 +1,4 @@
-import datetime
-
-from pydantic import BaseModel, ConfigDict, FutureDatetime, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ReservationBase(BaseModel):
@@ -20,10 +18,6 @@ class MakeEditReservationInput(BaseModel):
 
 class EditReservationClientInput(MakeEditReservationInput):
     exam_schedule_id: int
-
-
-class EditReservationAdminInput(EditReservationClientInput):
-    user_id: int
 
 
 class MakeEditReservationOutput(BaseModel):

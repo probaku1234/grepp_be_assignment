@@ -10,6 +10,11 @@ class ReservationRepository:
     def __init__(self, session: Session):
         self.session = session
 
+    def get_by_id(self, _id: int) -> Type[Reservation]:
+        reservation = self.session.query(Reservation).filter_by(id=_id).first()
+
+        return reservation
+
     def get_by_user_id(self, user_id: int) -> List[Optional[ReservationBase]]:
         reservations = self.session.query(Reservation).filter_by(user_id=user_id)
         return [ReservationBase(**reservation.__dict__) for reservation in reservations]
@@ -49,3 +54,7 @@ class ReservationRepository:
         reservation.comment = data_dict['comment']
         self.session.commit()
         self.session.refresh(reservation)
+
+    def delete(self, reservation: Type[Reservation]):
+        self.session.delete(reservation)
+        self.session.commit()

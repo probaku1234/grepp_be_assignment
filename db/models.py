@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.schema import PrimaryKeyConstraint, Index
 
 from db.database import Base
+import uuid
 
 
 class User(Base):
@@ -43,6 +44,7 @@ class Reservation(Base):
     """
     __tablename__ = 'reservations'
 
+    id = Column(String(30), primary_key=True, nullable=False, index=True, default=str(uuid.uuid4()))
     user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
     user = relationship('User', back_populates='reservations')
     exam_schedule_id = Column(Integer, ForeignKey('exam_schedules.id'), primary_key=True)
