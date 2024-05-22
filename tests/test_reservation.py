@@ -11,14 +11,14 @@ class TestReservationRoute:
     class TestMakeReservation:
         def test_make_reservation_should_return_403_with_no_token(self, test_db):
             response = client.post(
-                "/api/v1/exam_schedule/make_reservation/2",
+                "/api/v1/reservation/make_reservation/2",
             )
 
             assert response.status_code == 403, response.text
 
         def test_make_reservation_should_return_401_with_invalid_token(self, test_db):
             response = client.post(
-                "/api/v1/exam_schedule/make_reservation/2",
+                "/api/v1/reservation/make_reservation/2",
                 headers={
                     "Authorization": "Bearer invalid_token"
                 }
@@ -30,7 +30,7 @@ class TestReservationRoute:
             token = encode_jwt('1', 'admin 1', 'admin')
 
             response = client.post(
-                "/api/v1/exam_schedule/make_reservation/2",
+                "/api/v1/reservation/make_reservation/2",
                 headers={"Authorization": f"Bearer {token}"},
                 json={
                     'comment': ""
@@ -50,7 +50,7 @@ class TestReservationRoute:
             session.flush()
 
             response = client.post(
-                "/api/v1/exam_schedule/make_reservation/1",
+                "/api/v1/reservation/make_reservation/1",
                 headers={"Authorization": f"Bearer {token}"},
                 json={
                     'comment': ""
@@ -65,7 +65,7 @@ class TestReservationRoute:
             token = encode_jwt('1', 'user 1', 'client')
 
             response = client.post(
-                f"/api/v1/exam_schedule/make_reservation/{exam_schedule_id}",
+                f"/api/v1/reservation/make_reservation/{exam_schedule_id}",
                 headers={"Authorization": f"Bearer {token}"},
                 json={
                     'comment': ""
@@ -105,7 +105,7 @@ class TestReservationRoute:
             session.commit()
 
             response = client.post(
-                f"/api/v1/exam_schedule/make_reservation/{exam_schedule.id}",
+                f"/api/v1/reservation/make_reservation/{exam_schedule.id}",
                 headers={"Authorization": f"Bearer {token}"},
                 json={
                     'comment': ""
@@ -132,7 +132,7 @@ class TestReservationRoute:
             test_comment = "test comment"
 
             response = client.post(
-                f"/api/v1/exam_schedule/make_reservation/{exam_schedule.id}",
+                f"/api/v1/reservation/make_reservation/{exam_schedule.id}",
                 headers={"Authorization": f"Bearer {token}"},
                 json={
                     'comment': test_comment
@@ -141,11 +141,9 @@ class TestReservationRoute:
 
             assert response.status_code == 201
 
-            assert "user_id" in response.json()
             assert "exam_schedule_id" in response.json()
             assert "confirmed" in response.json()
             assert "comment" in response.json()
-            assert response.json()["user_id"] == 1
             assert response.json()["exam_schedule_id"] == exam_schedule.id
             assert response.json()["comment"] == test_comment
             assert response.json()["confirmed"] is False
@@ -154,14 +152,14 @@ class TestReservationRoute:
 class TestGetMyReservation:
     def test_my_reservation_should_return_403_with_no_token(self, test_db):
         response = client.get(
-            "/api/v1/exam_schedule/my_reservation",
+            "/api/v1/reservation/my_reservation",
         )
 
         assert response.status_code == 403, response.text
 
     def test_my_reservation_should_return_403_with_invalid_token(self, test_db):
         response = client.get(
-            "/api/v1/exam_schedule/my_reservation",
+            "/api/v1/reservation/my_reservation",
 
             headers={
                 "Authorization": "Bearer invalid_token"
@@ -174,7 +172,7 @@ class TestGetMyReservation:
         token = encode_jwt('1', 'user 1', 'client')
 
         response = client.get(
-            "/api/v1/exam_schedule/my_reservation",
+            "/api/v1/reservation/my_reservation",
             headers={
                 "Authorization": f"Bearer {token}"
             }
@@ -188,7 +186,7 @@ class TestGetMyReservation:
         token = encode_jwt('2', 'admin 1', 'admin')
 
         response = client.get(
-            "/api/v1/exam_schedule/my_reservation",
+            "/api/v1/reservation/my_reservation",
             headers={
                 "Authorization": f"Bearer {token}"
             }
@@ -213,7 +211,7 @@ class TestGetMyReservation:
         session.flush()
 
         response = client.get(
-            "/api/v1/exam_schedule/my_reservation",
+            "/api/v1/reservation/my_reservation",
             headers={
                 "Authorization": f"Bearer {token}"
             }
@@ -235,14 +233,14 @@ class TestGetMyReservation:
 class TestGetUserReservations:
     def test_get_user_reservations_should_return_403_with_no_token(self, test_db):
         response = client.get(
-            "/api/v1/exam_schedule/user_reservation/1",
+            "/api/v1/reservation/user_reservation/1",
         )
 
         assert response.status_code == 403, response.text
 
     def test_get_user_reservations_should_return_403_with_invalid_token(self, test_db):
         response = client.get(
-            "/api/v1/exam_schedule/user_reservation/1",
+            "/api/v1/reservation/user_reservation/1",
 
             headers={
                 "Authorization": "Bearer invalid_token"
@@ -255,7 +253,7 @@ class TestGetUserReservations:
         token = encode_jwt('1', 'user 1', 'client')
 
         response = client.get(
-            "/api/v1/exam_schedule/user_reservation/1",
+            "/api/v1/reservation/user_reservation/1",
             headers={
                 "Authorization": f"Bearer {token}"
             }
@@ -269,7 +267,7 @@ class TestGetUserReservations:
 
         invalid_user_id = 999
         response = client.get(
-            f"/api/v1/exam_schedule/user_reservation/{invalid_user_id}",
+            f"/api/v1/reservation/user_reservation/{invalid_user_id}",
             # Using a user_id that doesn't exist in the test database
             headers={"Authorization": f"Bearer {token}"}
         )
@@ -292,7 +290,7 @@ class TestGetUserReservations:
         session.flush()
 
         response = client.get(
-            "/api/v1/exam_schedule/user_reservation/1",
+            "/api/v1/reservation/user_reservation/1",
             headers={"Authorization": f"Bearer {token}"}
         )
 

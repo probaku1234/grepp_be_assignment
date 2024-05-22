@@ -20,7 +20,7 @@ reservation_router = APIRouter(
 @reservation_router.post('/make_reservation/{exam_schedule_id}',
                          dependencies=[Depends(JWTBearer())],
                          status_code=status.HTTP_201_CREATED,
-                         response_model=reservation.ReservationBase,
+                         response_model=reservation.MakeEditReservationOutput ,
                          name='시험 일정 예약신청',
                          responses={
                              404: {

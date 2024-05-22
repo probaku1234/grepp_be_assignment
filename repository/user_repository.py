@@ -24,5 +24,5 @@ class UserRepository:
         return user
 
     def exist_by_id(self, _id: int) -> bool:
-        user = self.session.query(User).filter_by(id=_id)
+        user = self.session.query(User).filter_by(id=_id).first()
         return user is not None

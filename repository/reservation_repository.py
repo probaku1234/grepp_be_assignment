@@ -16,7 +16,7 @@ class ReservationRepository:
         return reservation
 
     def get_by_user_id(self, user_id: int) -> List[Optional[ReservationBase]]:
-        reservations = self.session.query(Reservation).filter_by(user_id=user_id)
+        reservations = self.session.query(Reservation).filter_by(user_id=user_id).all()
         return [ReservationBase(**reservation.__dict__) for reservation in reservations]
 
     def get_by_user_id_exam_id(self, exam_schedule_id: int, user_id: int) -> Type[Reservation]:
@@ -25,7 +25,7 @@ class ReservationRepository:
         return reservation
 
     def exist_by_user_id_exam_id(self, exam_schedule_id: int, user_id: int) -> bool:
-        reservation = self.session.query(Reservation).filter_by(user_id=user_id, exam_schedule_id=exam_schedule_id)
+        reservation = self.session.query(Reservation).filter_by(user_id=user_id, exam_schedule_id=exam_schedule_id).first()
         return reservation is not None
 
     def get_confirmed_schedule_num(self, exam_schedule_id) -> int:
