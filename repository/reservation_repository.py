@@ -10,7 +10,7 @@ class ReservationRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_by_id(self, _id: int) -> Type[Reservation]:
+    def get_by_id(self, _id: str) -> Type[Reservation]:
         reservation = self.session.query(Reservation).filter_by(id=_id).first()
 
         return reservation
